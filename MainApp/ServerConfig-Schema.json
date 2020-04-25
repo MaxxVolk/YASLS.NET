@@ -1,0 +1,170 @@
+{
+  "$schema": "http://json-schema.org/draft-04/schema",
+  "$id": "http://json-schema.org/schemas/YASLS-schema.json",
+  "title": "JSON Schema for my JSON file format",
+
+  "type": "object",
+
+  "properties": {
+    "Inputs": {
+      "type": "object",
+      "description": "Define one or more inputs, which defines how log data flows in.",
+      "additionalProperties": {
+        "description": "Define a single input by specifying .NET assembly, managed type, and module configuration. The managed type must support IInputModule interface. Each module runs in a separeate thread.",
+        "$ref": "#/%24defs/ModuleDef"
+      }
+    },
+    "Queues": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "properties": {
+          "Inputs": {
+            "type": "array",
+            "description": "References to inputs.",
+            "items": {
+              "type": "string",
+              "minItems": 1
+            }
+          },
+          "AttributeExtractors": {
+            "additionalProperties": {
+              "description": "Collection of property extractor modules. Modules must support IAttributeExtractor interface. Modules run consequentually in the queue offload thread.",
+              "$ref": "#/%24defs/ModuleDef"
+            }
+          },
+          "Attributes": {
+            "$ref": "#/%24defs/AttributesDef"
+          }
+        }
+      }
+    },
+    "Routing": {
+      "type": "object",
+      "description": "A collection of message routes. Each route has a single queue at its input, then it passes a message throught a collection of filters. Each filter has a parser and an output attached to it. Any messages matched my a filter are passed to its parser, and then to associated output.",
+      "additionalProperties": {
+        "type": "object",
+        "description": "Named route object.",
+        "properties": {
+          "InputQueue": {
+            "type": "string",
+            "description": "Input queue for this route."
+          },
+          "Filters": {
+            "type": "object",
+            "description": "A collection of filters in the current route.",
+            "additionalProperties": {
+              "type": "object",
+              "description": "Filter definition. One of the following filtering properties can be defined: AllMessages, or one of the standard filters (RegExp, AttributeFilter), or a custom filter module Filter. Define 'Parser' to apply a specific message parser. 'Output' must be defined to write events into output queues.",
+              "properties": {
+                "AllMessages": {
+                  "type": "boolean",
+                  "description": "All messages match this filter.",
+                  "default": false
+                },
+                "RegExp": {
+                  "type": "object",
+                  "description": "Regular Expression filter. Define at least one property. All defined property are combined with boolean AND.",
+                  "properties": {
+                    "InputAttribute": {
+                      "type": [ "string", "null" ],
+                      "description": "Input argiment for the filter: Actual raw message if null, or an attribut."
+                    },
+                    "Conditions": {
+                      "type": "object",
+                      "properties": {
+                        "And": {
+                          "type": "array",
+                          "description": "All regular expressions in this property must match.",
+                          "items": { "type": "string" }
+                        },
+                        "Or": {
+                          "type": "array",
+                          "description": "At least one regular expressions in this property must match.",
+                          "items": { "type": "string" }
+                        },
+                        "NotAll": {
+                          "type": "array",
+                          "description": "All of regular expressions in this property must not match.",
+                          "items": { "type": "string" }
+                        },
+                        "NotAny": {
+                          "type": "array",
+                          "description": "None of regular expressions in this property must match.",
+                          "items": { "type": "string" }
+                        }
+                      }
+                    }
+                  }
+                },
+                "Filter": {
+                  "description": "Defines and external filter by specifying .NET assembly, managed type, and module configuration. The managed type must support IFilterModule interface.",
+                  "$ref": "#/%24defs/ModuleDef"
+                },
+                "StopIfMatched": {
+                  "type": "boolean",
+                  "default": false,
+                  "description": "If true, then don't pass the current message to consequental filters if the message matches this filter conditions."
+                },
+                "Parser": {
+                  "description": "Defines and external parser by specifying .NET assembly, managed type, and module configuration. The managed type must support IParserModule interface.",
+                  "$ref": "#/%24defs/ModuleDef"
+                },
+                "Output": {
+                  "type": "array",
+                  "items": { "type": "string" },
+                  "description": "Reference to an output."
+                },
+                "Attributes": {
+                  "$ref": "#/%24defs/AttributesDef"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "Outputs": {
+      "type": "object",
+      "description": "Collection of outputs. Each output runs in a separate queue. Output module must suppot IOutputModule interface.",
+      "additionalProperties": {
+        "description": "Define a single output by specifying .NET assembly, managed type, and module configuration. The managed type must support IOutputModule interface. Each module runs in a separeate thread.",
+        "$ref": "#/%24defs/ModuleDef"
+      }
+    }
+  },
+  "$defs": {
+    "AttributesDef": {
+      "type": "object",
+      "description": "Adds additional attributes to an event passed via vis channel.",
+      "additionalProperties": {
+        "type": "string"
+      }
+    },
+    "ModuleDef": {
+      "type": "object",
+      "properties": {
+        "Assembly": {
+          "type": [ "string", "null" ],
+          "description": "Reference to assembly defined in the Assemblies section. Leave it null or empty for built-in modules."
+        },
+        "Type": {
+          "type": "string",
+          "description": "Managed type name from the referenced assembly. They type must support IInputModule interface."
+        },
+        "ConfigurationFilePath": {
+          "type": [ "string", "null" ],
+          "description": "Path to an external configuration file for the input."
+        },
+        "ConfigurationJSON": {
+          "type": [ "object", "null" ],
+          "description": "Embedded input configuration"
+        },
+        "Attributes": {
+          "$ref": "#/%24defs/AttributesDef"
+        }
+      }
+    }
+
+  }
+}

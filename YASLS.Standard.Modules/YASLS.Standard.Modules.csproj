@@ -4,17 +4,16 @@
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
-    <ProjectGuid>{B5756337-F2B6-40BE-9504-F56414E2B00D}</ProjectGuid>
-    <OutputType>Exe</OutputType>
-    <RootNamespace>MainApp</RootNamespace>
-    <AssemblyName>MainApp</AssemblyName>
+    <ProjectGuid>{C17F759C-CF8D-4EED-AE3C-C46E1C3C9BA0}</ProjectGuid>
+    <OutputType>Library</OutputType>
+    <AppDesignerFolder>Properties</AppDesignerFolder>
+    <RootNamespace>YASLS.Standard.Modules</RootNamespace>
+    <AssemblyName>YASLS.Standard.Modules</AssemblyName>
     <TargetFrameworkVersion>v4.8</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
-    <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
     <Deterministic>true</Deterministic>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
-    <PlatformTarget>AnyCPU</PlatformTarget>
     <DebugSymbols>true</DebugSymbols>
     <DebugType>full</DebugType>
     <Optimize>false</Optimize>
@@ -24,7 +23,6 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
-    <PlatformTarget>AnyCPU</PlatformTarget>
     <DebugType>pdbonly</DebugType>
     <Optimize>true</Optimize>
     <OutputPath>bin\Release\</OutputPath>
@@ -38,7 +36,6 @@
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
-    <Reference Include="System.Management" />
     <Reference Include="System.Xml.Linq" />
     <Reference Include="System.Data.DataSetExtensions" />
     <Reference Include="Microsoft.CSharp" />
@@ -47,44 +44,17 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="..\..\_Shared Code\Helpers\ServiceHelper.cs">
-      <Link>ServiceHelper.cs</Link>
-    </Compile>
-    <Compile Include="Implementation\Core\QueueFactory.cs" />
-    <Compile Include="Implementation\Inputs\FileInput.cs" />
-    <Compile Include="Implementation\Outputs\FileOutput.cs" />
-    <Compile Include="Implementation\Extractors.cs" />
-    <Compile Include="Implementation\Inputs\NetworkInput.cs" />
-    <Compile Include="Configuration\RootConfiguration.cs" />
-    <Compile Include="Configuration\Route.cs" />
-    <Compile Include="Configuration\Queue.cs" />
-    <Compile Include="Implementation\Core\MasterQueue.cs" />
-    <Compile Include="Implementation\Outputs\SplunkHECOutput.cs" />
-    <Compile Include="Implementation\Parsers\RegExParser.cs" />
-    <Compile Include="Implementation\Core\Route.cs" />
-    <Compile Include="Program.cs" />
+    <Compile Include="Output\ConsoleOutput.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="Implementation\Core\YASLServer.cs" />
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="App.config" />
-    <None Include="packages.config" />
-    <None Include="ServerConfig-Schema.json" />
-    <None Include="ServerConfig.json">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </None>
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\YASLS.SDK.Library\YASLS.SDK.Library.csproj">
-      <Project>{df6820ef-cd14-46a2-a221-d522214c02f6}</Project>
+      <Project>{DF6820EF-CD14-46A2-A221-D522214C02F6}</Project>
       <Name>YASLS.SDK.Library</Name>
     </ProjectReference>
   </ItemGroup>
-  <ItemGroup />
+  <ItemGroup>
+    <None Include="packages.config" />
+  </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
-  <ProjectExtensions>
-    <VisualStudio>
-      <UserProperties ServerConfig_1json__JSONSchema="ServerConfig-Schema.json" />
-    </VisualStudio>
-  </ProjectExtensions>
 </Project>

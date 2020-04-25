@@ -1,15 +1,24 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using Newtonsoft.Json;
+using System;
+using System.IO;
+using YASLS.Configuration;
 
-namespace MainApp
+namespace YASLS
 {
   class Program
   {
     static void Main(string[] args)
     {
+      ServerConfiguration serverConfiguration = JsonConvert.DeserializeObject<ServerConfiguration>(File.ReadAllText("ServerConfig.json"));
+
+      YASLServer server = new YASLServer(serverConfiguration);
+      server.Start();
+
+      Console.ReadLine();
+
+      server.Stop();
+
     }
+
   }
 }

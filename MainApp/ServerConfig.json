@@ -1,0 +1,498 @@
+{
+  "Inputs": {
+    "TCP Syslog Listener": {
+      "Assembly": null,
+      "Type": "YASLS.NetworkInput",
+      "ConfigurationFilePath": null,
+      "ConfigurationJSON": {
+        "Port": 514,
+        "Protocol": "TCP",
+        "ReciveTimestampAttributeFormat": "UTC" // also "UTC"
+      },
+      "Attributes": {
+        "NetworkSource": "TCP Syslog"
+      }
+    },
+    "UDP Syslog Listener": {
+      "Assembly": null,
+      "Type": "YASLS.NetworkInput",
+      "ConfigurationFilePath": null,
+      "ConfigurationJSON": {
+        "Port": 514,
+        "Protocol": "UDP",
+        "AddSenderIPAttribute": true,
+        "AddReciveTimestampAttribute": true,
+        "ReciveTimestampAttributeFormat": "UTC" // also "UTC"
+      },
+      "Attributes": {
+        "NetworkSource": "UDP Syslog"
+      }
+    }
+    //  "Assembly": "vCenterLibrary",
+    //  "ModuleType": "vSphere.Logging.Module.HTTPEventIngress",
+    //  "ConfigurationFilePath": null,
+    //  "ConfigurationJSON": {
+    //    "ListeningPort": 8088,
+    //    "UseSecureConnection": false,
+    //    "CertificateThumbprint":  null
+    //  },
+    //  "Attributes": {
+    //    "NetworkSource": "HTTP_VC"
+    //  }
+    //}
+  },
+  "Queues": {
+    "DefaultQueue": {
+      "Inputs": [ "UDP Syslog Listener", "TCP Syslog Listener", "Dump File Input" ],
+      "AttributeExtractors": {
+        "Facility Code Extractor": {
+          "Assembly": null,
+          "Type": "YASLS.FacilityCodeExtractor",
+          "ConfigurationFilePath": null,
+          "ConfigurationJSON": {
+            "AddDefaultIfNoPRI": true,
+            "OutCode": true,
+            "OutText": true,
+            "DefaultFacility": 1, // user level
+            "DefaultSeverity": 5, // Informational
+            "FacilityCodeAttribute": "FacilityCode",
+            "SeverityCodeAttribute": "SeverityCode",
+            "FacilityTextAttribute": "Facility",
+            "SeverityTextAttribute": "Severity"
+          }
+        },
+        "Sender IP Reverse DNS Lookup": {
+          "Assembly": null,
+          "Type": "YASLS.ReverseDNSLookup",
+          "ConfigurationFilePath": null,
+          "ConfigurationJSON": {
+            "InputAttribute": "SenderIP",
+            "OutputAttribute": "SenderHostName"
+          }
+        }
+      },
+      "Attributes": {
+        "ProcessingQueue": "Default"
+      }
+    },
+    "Test": {
+      "Inputs": [ "TCP Syslog Listener" ],
+      "Attributes": {
+        "ProcessingQueue": "Test"
+      }
+    }
+  },
+  "Assemblies": {
+    "NetAppLibrary": {
+      "AssemblyQualifiedName": "NetApp.Syslog.Parser, Version=1.0.0.0, Culture=neutral, PublicKeyToken=df918a7ca80c8d52",
+      "AssemblyFilePath": "NetApp.Syslog.Parser.dll"
+    },
+    "vCenterLibrary": {
+      "AssemblyQualifiedName": "vSphere.Logging.Module, Version=1.0.0.0, Culture=neutral, PublicKeyToken=df918a7ca80c8d52",
+      "AssemblyFilePath": "vSphere.Logging.Module.dll"
+    }
+  },
+  "Outputs": {
+    "Console Debug Output": {
+      "Assembly": null,
+      "Type": "YASLS.ConsoleOutput",
+      "ConfigurationJSON": {
+        "Multiline": true
+      }
+    },
+    "JSON File Output": {
+      "Assembly": null,
+      "Type": "YASLS.FileOutput",
+      "ConfigurationJSON": {
+        "Mode": "DataItemAsJSON",
+        "Path": "C:\\Temp\\etc",
+        "RotationSettings": {
+          "FileNameTemplate": "test.log",
+          "Rotation": false
+        }
+      }
+    },
+    "Splunk HEC": {
+      "Assembly": null,
+      "Type": "YASLS.SplunkHECOutput",
+      "ConfigurationJSON": {
+        "URL": "http://localhost:9923/services/collector/event",
+        "Token": "FF8B5E57-B959-4DED-8FC0-082F26D8B738",
+        "UseFields": false,
+        "EventMetadataDefaults": {
+          "Index": "daascom_int",
+          "UseCurrentTime": false
+        },
+        "FieldMappings": {
+          "HostAttribute": "Host",
+          "TimeAttribute": "EventTimestamp",
+          "SourceAttribute": "source",
+          "SourcetypeAttribute": "sourcetype"
+        }
+      }
+    }
+  },
+  "Routing": {
+    "DefaultRoute": {
+      "InputQueue": "DefaultQueue",
+      "Filters": {
+        "AllMatched": {
+          "AllMessages": true,
+          "StopIfMatched": false,
+          "Parser": {
+            "Assembly": null,
+            "Type": "YASLS.RegExParser",
+            "ConfigurationJSON": {
+              "ParsingExpressions": [
+                {
+                  "MatchingRegEx": null,
+                  "ParsingRegEx": "(?<name>(?:\"(?<name1>[^\"]*)\"|[^=,| ])*)\\s*=\\s*(?<value>(?:\"[^\"]*\"|[^=,| ])*)",
+                  "StopIfMatched": false,
+                  "MultiMatch": true,
+                  "FieldSettings": [
+                    {
+                      "Input": {
+                        "Group": "value",
+                        "Type": "String",
+                        "GroupToOutputAttribute": "name"
+                      }
+                    }
+                  ]
+                },
+                {
+                  "MatchingRegEx": "\\<(?<PRIVAL>\\d{1,3})\\>(?<SYSLOGTIME>(\\w{3} \\d{1,2} \\d{1,2}:\\d{1,2}:\\d{1,2})) (?<HOST>\\w+) (?<COMPONENT>desktone)",
+                  "ParsingRegEx": "\\<(?<PRIVAL>\\d{1,3})\\>(?<SYSLOGTIME>(\\w{3} \\d{1,2} \\d{1,2}:\\d{1,2}:\\d{1,2})) (?<HOST>\\w+) (?<COMPONENT>desktone)(\\s+(?<TIMESTAMP>(\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}:\\d{2},\\d{3}))\\s+(?<LEVEL>\\w+)\\s+\\[(?<TYPE>(\\S+))\\]-\\[(?<INSTANCE>(\\S+))\\]){0,1}\\s+(?<MESSAGE>(.*))",
+                  "FieldSettings": [
+                    // keep the original message as it is
+                    {
+                      "Input": {
+                        "Message": true
+                      },
+                      "OutputAttribute": null
+                    },
+                    // add attributes
+                    {
+                      "Input": {
+                        "Group": "HOST",
+                        "Type": "String"
+                      },
+                      "OutputAttribute": "Host"
+                    },
+                    {
+                      "Input": {
+                        "Group": "TIMESTAMP",
+                        "Type": "DateTime",
+                        "Format": "yyyy-MM-dd H:mm:ss,FFF"
+                      },
+                      "OutputAttribute": "EventTimestamp"
+                    },
+                    {
+                      "Input": {
+                        "Group": "LEVEL",
+                        "Type": "String"
+                      },
+                      "OutputAttribute": "Severity"
+                    },
+                    {
+                      "Input": {
+                        "Group": "TYPE",
+                        "Type": "String"
+                      },
+                      "OutputAttribute": "Type"
+                    },
+                    {
+                      "Input": {
+                        "Group": "INSTANCE",
+                        "Type": "String"
+                      },
+                      "OutputAttribute": "Instance"
+                    },
+                    {
+                      "Input": {
+                        "Group": "SYSLOGTIME",
+                        "Type": "String"
+                      },
+                      "OutputAttribute": "SyslogTime"
+                    },
+                    {
+                      "Input": {
+                        "Group": "COMPONENT",
+                        "Type": "String"
+                      },
+                      "OutputAttribute": "Component"
+                    }
+                  ]
+                },
+                {
+                  "MatchingRegEx": "\\<(?<PRIVAL>\\d{1,3})\\>(?<SYSLOGTIME>(\\w{3} \\d{1,2} \\d{1,2}:\\d{1,2}:\\d{1,2})) (?<HOST>\\w+) (?<COMPONENT>CRON)\\[(?<PID>(\\d+))\\]:",
+                  "ParsingRegEx": "\\<(?<PRIVAL>\\d{1,3})\\>(?<SYSLOGTIME>(\\w{3} \\d{1,2} \\d{1,2}:\\d{1,2}:\\d{1,2})) (?<HOST>\\w+) (?<COMPONENT>CRON)\\[(?<PID>(\\d+))\\]: (?<MESSAGE>(.*))",
+                  "FieldSettings": [
+                    // keep the original message as it is
+                    {
+                      "Input": {
+                        "Message": true
+                      },
+                      "OutputAttribute": null
+                    },
+                    // add attributes
+                    {
+                      "Input": {
+                        "Group": "HOST",
+                        "Type": "String"
+                      },
+                      "OutputAttribute": "Host"
+                    },
+                    {
+                      "Input": {
+                        "Attribute": "ReciveTimestamp"
+                      },
+                      "OutputAttribute": "EventTimestamp"
+                    },
+                    {
+                      "Input": {
+                        "Value": "UNKNOWN",
+                        "Type": "String"
+                      },
+                      "OutputAttribute": "Severity"
+                    },
+                    {
+                      "Input": {
+                        "Group": "SYSLOGTIME",
+                        "Type": "String"
+                      },
+                      "OutputAttribute": "SyslogTime"
+                    },
+                    {
+                      "Input": {
+                        "Group": "COMPONENT",
+                        "Type": "String"
+                      },
+                      "OutputAttribute": "Component"
+                    },
+                    {
+                      "Input": {
+                        "Group": "PID",
+                        "Type": "String"
+                      },
+                      "OutputAttribute": "PID"
+                    }
+                  ]
+                },
+                {
+                  "MatchingRegEx": "\\<(?<PRIVAL>\\d{1,3})\\>(?<SYSLOGTIME>(\\w{3} \\d{1,2} \\d{1,2}:\\d{1,2}:\\d{1,2})) (?<HOST>\\w+) (?<COMPONENT>slon_fdb)",
+                  "ParsingRegEx": "\\<(?<PRIVAL>\\d{1,3})\\>(?<SYSLOGTIME>(\\w{3} \\d{1,2} \\d{1,2}:\\d{1,2}:\\d{1,2})) (?<HOST>\\w+) (?<COMPONENT>slon_fdb)\\[(?<PID>(\\d+))\\]: \\[(?<ID1>([\\s\\S^\\]]*))\\] \\[(?<ID2>([\\s\\S^\\]]*))\\] (?<LEVEL>(\\w*))\\s*(?<MESSAGE>(.*))",
+                  "FieldSettings": [
+                    // keep the original message as it is
+                    {
+                      "Input": {
+                        "Message": true
+                      },
+                      "OutputAttribute": null
+                    },
+                    // add attributes
+                    {
+                      "Input": {
+                        "Group": "HOST",
+                        "Type": "String"
+                      },
+                      "OutputAttribute": "Host"
+                    },
+                    {
+                      "Input": {
+                        "Attribute": "ReciveTimestamp"
+                      },
+                      "OutputAttribute": "EventTimestamp"
+                    },
+                    {
+                      "Input": {
+                        "Group": "LEVEL",
+                        "Type": "String"
+                      },
+                      "OutputAttribute": "Severity"
+                    },
+                    {
+                      "Input": {
+                        "Group": "SYSLOGTIME",
+                        "Type": "String"
+                      },
+                      "OutputAttribute": "SyslogTime"
+                    },
+                    {
+                      "Input": {
+                        "Group": "COMPONENT",
+                        "Type": "String"
+                      },
+                      "OutputAttribute": "Component"
+                    },
+                    {
+                      "Input": {
+                        "Group": "PID",
+                        "Type": "String"
+                      },
+                      "OutputAttribute": "PID"
+                    },
+                    {
+                      "Input": {
+                        "Group": "ID1",
+                        "Type": "String"
+                      },
+                      "OutputAttribute": "ID1"
+                    },
+                    {
+                      "Input": {
+                        "Group": "ID2",
+                        "Type": "String"
+                      },
+                      "OutputAttribute": "ID2"
+                    }
+                  ]
+                },
+                {
+                  "MatchingRegEx": "\\<(?<PRIVAL>\\d{1,3})\\>(?<SYSLOGTIME>(\\w{3} \\d{1,2} \\d{1,2}:\\d{1,2}:\\d{1,2})) (?<HOST>\\w+) (?<COMPONENT>(crmd|pengine))",
+                  "ParsingRegEx": "\\<(?<PRIVAL>\\d{1,3})\\>(?<SYSLOGTIME>(\\w{3} \\d{1,2} \\d{1,2}:\\d{1,2}:\\d{1,2})) (?<HOST>\\w+) (?<COMPONENT>(crmd|pengine))\\[(?<PID>(\\d+))\\]:\\s* (?<LEVEL>(\\w*)):\\s*(?<MESSAGE>(.*))",
+                  "RegExOptions": [ "None" ], // Refer to System.Text.RegularExpressions.RegexOptions
+                  "FieldSettings": [
+                    // keep the original message as it is
+                    {
+                      "Input": {
+                        "Message": true
+                      },
+                      "OutputAttribute": null
+                    },
+                    // add attributes
+                    {
+                      "Input": {
+                        "Group": "HOST",
+                        "Type": "String"
+                      },
+                      "OutputAttribute": "Host"
+                    },
+                    {
+                      "Input": {
+                        "Attribute": "ReciveTimestamp"
+                      },
+                      "OutputAttribute": "EventTimestamp"
+                    },
+                    {
+                      "Input": {
+                        "Group": "LEVEL",
+                        "Type": "String"
+                      },
+                      "OutputAttribute": "Severity"
+                    },
+                    {
+                      "Input": {
+                        "Group": "SYSLOGTIME",
+                        "Type": "String"
+                      },
+                      "OutputAttribute": "SyslogTime"
+                    },
+                    {
+                      "Input": {
+                        "Group": "COMPONENT",
+                        "Type": "String"
+                      },
+                      "OutputAttribute": "Component"
+                    },
+                    {
+                      "Input": {
+                        "Group": "PID",
+                        "Type": "String"
+                      },
+                      "OutputAttribute": "PID"
+                    }
+                  ]
+                }
+              ],
+              // for all messages
+              "DefaultFieldSettings": [
+                {
+                  "Input": {
+                    "Attribute": "Facility"
+                  },
+                  "OutputAttribute": "SyslogFacility"
+                },
+                {
+                  "Input": {
+                    "Attribute": "Severity"
+                  },
+                  "OutputAttribute": "SyslogSeverity"
+                },
+                {
+                  "Input": {
+                    "Value": "daas",
+                    "Type": "String"
+                  },
+                  "OutputAttribute": "source"
+                },
+                {
+                  "Input": {
+                    "Value": "_json",
+                    "Type": "String"
+                  },
+                  "OutputAttribute": "sourcetype"
+                }
+              ],
+              // for not parsed messages
+              "PassthroughFieldSettings": [
+                // keep the original message as it is
+                {
+                  "Input": {
+                    "Message": true
+                  },
+                  "OutputAttribute": null
+                },
+                // add attributes
+                {
+                  "Input": {
+                    "Attribute": "SenderHostName"
+                  },
+                  "OutputAttribute": "Host"
+                },
+                {
+                  "Input": {
+                    "Attribute": "ReciveTimestamp",
+                    "Type": "DateTime"
+                  },
+                  "OutputAttribute": "EventTimestamp"
+                }
+              ]
+            }
+          },
+          "Output": [ "JSON File Output", "Splunk HEC" ],
+          "Attributes": {
+            "sourcetype": "daas"
+          }
+        }
+        //"DetectNetAppMessages": {
+        //  "RegExp": {
+        //    "Or": [ " [\\w*:\\w*:\\w*]:" ]
+        //  },
+        //  "StopIfMatched": true,
+        //  "Parser": {
+        //    "Assembly": "NetAppLibrary",
+        //    "Type": "NetApp.Syslog.Parser.NetAppEventParser",
+        //    "ConfigurationFilePath": null,
+        //    "ConfigurationJSON": null
+        //  },
+        //  "Output": "NetAppFile",
+        //  "Attributes": {
+        //    "sourcetype": "netapp"
+        //  }
+        //},
+        //"DetectHitachiMessages": {
+        //  "RegExp": {
+        //    "Or": [ " SVP Storage: " ]
+        //  },
+        //  "StopIfMatched": true,
+        //  "Output": "HitachiFile"
+        //},
+        //"Unmatched": {
+        //  "Any": true,
+        //  "StopIfMatched": true,
+        //  "Output": "UnmatchedFile"
+        //}
+      }
+    }
+  }
+}
