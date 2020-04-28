@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Net;
+using System.Reflection;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -31,6 +32,7 @@ namespace YASLS
       Messages.Enqueue(message);
     }
 
+    #region IModule Implementation
     public string GetModuleName() => GetType().FullName;
 
     public string GetModuleDisplayName() => "Splunk HTTP Event Collector Output Module";
@@ -38,6 +40,9 @@ namespace YASLS
     public string GetModuleVendor() => "Core YASLS";
 
     public Guid GetModuleId() => moduleId;
+
+    public Version GetModuleVersion() => Assembly.GetAssembly(GetType()).GetName().Version;
+    #endregion
 
     public ThreadStart GetWorker() => new ThreadStart(WorkerProc);
 
@@ -143,7 +148,6 @@ namespace YASLS
 
       using (WebResponse Response = await Request.GetResponseAsync())
       {
-        Response.con
         using (Stream ResponseStream = Response.GetResponseStream())
         {
           using (StreamReader Reader = new StreamReader(ResponseStream, Encoding.UTF8))
@@ -246,7 +250,7 @@ namespace YASLS
       outputConfiguration = configuration.ToObject<SplunkHECOutputConfiguration>();
     }
 
-    public void RegisterServices(ILogger logger, IHealthReporter healthReporter, IQueueFactory factory)
+    public void RegisterServices(ILogger logger, IHealthReporter healthReporter, IQueueFactory factory, IPersistentDataStore persistentStore)
     {
       this.logger = logger;
       this.healthReporter = healthReporter;

@@ -3,14 +3,15 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using YASLS.SDK.Library;
 
-namespace YASLS
+namespace YASLS.Standard.Modules
 {
-  class ConsoleOutput : IOutputModule, IServerBind
+  public class ConsoleOutput : IOutputModule, IServerBind
   {
     protected readonly Guid moduleId = Guid.Parse("{A72FFDB6-F3AF-433F-9FE2-D1D23DA00281}");
     protected CancellationToken token;
@@ -48,7 +49,7 @@ namespace YASLS
         {
           if (Messages.TryDequeue(out MessageDataItem newMessage))
           {
-            Console.WriteLine($"Received at {newMessage.GetAttributeAsDateTime("ReciveTimestamp"):yyyy-MM-dd HH:mm:ss} from {newMessage.GetAttributeAsString("SenderIP")} via {newMessage.GetAttributeAsString("NetworkSource")}:\r\n {newMessage.Message}");
+            Console.WriteLine(newMessage.Message);
             foreach (string attrName in newMessage.GetAttributeNames)
               Console.WriteLine($"{attrName:30}: {newMessage.GetAttributeAsVariant(attrName)}");
             continue; // sleep only if the queue is empty
@@ -66,10 +67,8 @@ namespace YASLS
       }
     }
 
-    
-
     #region IServerBind Implementation
-    public void RegisterServices(ILogger logger, IHealthReporter healthReporter, IQueueFactory factory)
+    public void RegisterServices(ILogger logger, IHealthReporter healthReporter, IQueueFactory factory, IPersistentDataStore persistentStore)
     {
       this.logger = logger;
       this.healthReporter = healthReporter;
@@ -85,6 +84,8 @@ namespace YASLS
     public string GetModuleVendor() => "Core YASLS";
 
     public Guid GetModuleId() => moduleId;
+
+    public Version GetModuleVersion() => Assembly.GetAssembly(GetType()).GetName().Version;
     #endregion
   }
 }

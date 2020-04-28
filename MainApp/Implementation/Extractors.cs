@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
+using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
 using YASLS.SDK.Library;
@@ -23,18 +24,16 @@ namespace YASLS
         message.AddAttribute(extraAttr.Key, extraAttr.Value);
       try
       {
-        if (string.IsNullOrWhiteSpace(message.Message))
+        if (string.IsNullOrWhiteSpace(message.Message) && AddDefaultIfNoPRI)
         {
-          if (AddDefaultIfNoPRI)
-            AddSyslogPRI(message, facility: DefaultFacility, severity: DefaultSeverity);
+          AddSyslogPRI(message, facility: DefaultFacility, severity: DefaultSeverity);
           return;
         }
         int maxSubLen = message.Message.Length > 20 ? 20 : message.Message.Length;
         string rawMessageHead = message.Message.Substring(0, maxSubLen).Trim();
         if (string.IsNullOrWhiteSpace(rawMessageHead) && AddDefaultIfNoPRI)
         {
-          if (AddDefaultIfNoPRI)
-            AddSyslogPRI(message, facility: DefaultFacility, severity: DefaultSeverity);
+          AddSyslogPRI(message, facility: DefaultFacility, severity: DefaultSeverity);
           return;
         }
         if (rawMessageHead[0] == '<')
@@ -44,14 +43,12 @@ namespace YASLS
             int facility = priValue >> 3;
             int severity = priValue & 7;
             AddSyslogPRI(message, facility: facility, severity: severity);
-          }
-          else
-          {
-            if (AddDefaultIfNoPRI)
-              AddSyslogPRI(message, facility: DefaultFacility, severity: DefaultSeverity);
             return;
           }
         }
+        if (AddDefaultIfNoPRI)
+          AddSyslogPRI(message, facility: DefaultFacility, severity: DefaultSeverity);
+        return;
       }
       catch
       {
@@ -62,7 +59,7 @@ namespace YASLS
       }
     }
 
-    protected readonly string[] FacilityText = { "user", "mail", "system", "security", "syslogd", "printer", "network", "UUCP", "clock", "authorization", "FTP", "NTP",
+    protected readonly string[] FacilityText = { "kernel ", "user", "mail", "system", "security", "syslogd", "printer", "network", "UUCP", "clock", "authorization", "FTP", "NTP",
       "audit", "alert", "note2", "local0", "local1", "local2", "local3", "local4", "local5", "local6", "local7" };
     protected readonly string[] SeverityText = { "Emergency", "Alert", "Critical", "Error", "Warning", "Notice", "Informational", "Debug" };
 
@@ -106,6 +103,7 @@ namespace YASLS
       SeverityTextAttribute = configuration["SeverityTextAttribute"]?.Value<string>() ?? "Severity";
     }
 
+    #region IModule Implementation
     public string GetModuleName() => GetType().FullName;
 
     public string GetModuleDisplayName() => "Facility Code Extractor Module";
@@ -113,6 +111,9 @@ namespace YASLS
     public string GetModuleVendor() => "Core YASLS";
 
     public Guid GetModuleId() => moduleId;
+
+    public Version GetModuleVersion() => Assembly.GetAssembly(GetType()).GetName().Version;
+    #endregion
   }
 
   public class ReverseDNSLookup : IAttributeExtractorModule
@@ -147,6 +148,7 @@ namespace YASLS
       OutputAttribute = configuration["OutputAttribute"]?.Value<string>() ?? throw new ArgumentOutOfRangeException("OutputAttribute", "OutputAttribute value is missing. Check 'ConfigurationJSON' section.");
     }
 
+    #region IModule Implementation
     public string GetModuleName() => GetType().FullName;
 
     public string GetModuleDisplayName() => "Host IP Reverse DNS Lookup Module";
@@ -154,5 +156,8 @@ namespace YASLS
     public string GetModuleVendor() => "Core YASLS";
 
     public Guid GetModuleId() => moduleId;
+
+    public Version GetModuleVersion() => Assembly.GetAssembly(GetType()).GetName().Version;
+    #endregion
   }
 }

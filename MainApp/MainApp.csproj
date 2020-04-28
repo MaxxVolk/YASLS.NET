@@ -54,7 +54,7 @@
     <Compile Include="Implementation\Inputs\FileInput.cs" />
     <Compile Include="Implementation\Outputs\FileOutput.cs" />
     <Compile Include="Implementation\Extractors.cs" />
-    <Compile Include="Implementation\Inputs\NetworkInput.cs" />
+    <Compile Include="Implementation\Inputs\SyslogInput.cs" />
     <Compile Include="Configuration\RootConfiguration.cs" />
     <Compile Include="Configuration\Route.cs" />
     <Compile Include="Configuration\Queue.cs" />

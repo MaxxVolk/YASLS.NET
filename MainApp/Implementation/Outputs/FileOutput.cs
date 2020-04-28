@@ -5,6 +5,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Reflection;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -30,6 +31,7 @@ namespace YASLS
       Messages.Enqueue(message);
     }
 
+    #region IModule Implementation
     public string GetModuleName() => GetType().FullName;
 
     public string GetModuleDisplayName() => "File Output Module";
@@ -37,6 +39,9 @@ namespace YASLS
     public string GetModuleVendor() => "Core YASLS";
 
     public Guid GetModuleId() => moduleId;
+
+    public Version GetModuleVersion() => Assembly.GetAssembly(GetType()).GetName().Version;
+    #endregion
 
     public ThreadStart GetWorker() => new ThreadStart(WorkerProc);
 
@@ -98,12 +103,14 @@ namespace YASLS
       outputConfiguration = configuration.ToObject<FileOutputConfiguration>();
     }
 
-    public void RegisterServices(ILogger logger, IHealthReporter healthReporter, IQueueFactory factory)
+    #region IServerBind Implementation
+    public void RegisterServices(ILogger logger, IHealthReporter healthReporter, IQueueFactory factory, IPersistentDataStore persistentStore)
     {
       this.logger = logger;
       this.healthReporter = healthReporter;
       Messages = factory.GetMessageQueue(this);
     }
+    #endregion
   }
 
   public class FileOutputConfiguration

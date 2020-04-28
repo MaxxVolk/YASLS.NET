@@ -3,6 +3,7 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
@@ -59,6 +60,7 @@ namespace YASLS
       }
     }
 
+    #region IModule Implementation
     public ThreadStart GetWorker() => new ThreadStart(WorkerProc);
 
     public string GetModuleName() => GetType().FullName;
@@ -68,18 +70,23 @@ namespace YASLS
     public string GetModuleVendor() => "Core YASLS";
 
     public Guid GetModuleId() => moduleId;
+
+    public Version GetModuleVersion() => Assembly.GetAssembly(GetType()).GetName().Version;
+    #endregion
   }
 
-  public class Filter
+  public class Filter : IModule
   {
+    protected readonly Guid moduleId = Guid.Parse("{3F119A41-CD4A-4488-B52B-42DF581BB38C}");
     protected bool AllMessages = false;
     protected bool StopIfMatched = false;
-    protected IFilterModule FilterModule;
     protected RegExpFilter RegExp;
-    protected IParserModule ParserModule;
     protected Dictionary<string, string> Attributes = new Dictionary<string, string>();
-    protected List<IOutputModule> OutputModules = new List<IOutputModule>();
     protected ILogger Logger;
+    // modules
+    protected IFilterModule FilterModule;
+    protected IParserModule ParserModule;
+    protected List<IOutputModule> OutputModules = new List<IOutputModule>();
 
     public Filter (FilterDefinition filterDefinition, ILogger logger)
     {
@@ -134,11 +141,22 @@ namespace YASLS
       }
       catch (Exception e)
       {
-        Logger?.LogEvent(Guid.Empty, Severity.Error, "FilterAction", "Exception in filter", e);
+        Logger?.LogEvent(this, Severity.Error, "FilterAction", "Exception in filter", e);
         return false;
       }
-      
     }
+
+    #region IModule Implementation
+    public string GetModuleName() => GetType().FullName;
+
+    public string GetModuleDisplayName() => "Main Filter Module";
+
+    public string GetModuleVendor() => "Core YASLS";
+
+    public Guid GetModuleId() => moduleId;
+
+    public Version GetModuleVersion() => Assembly.GetAssembly(GetType()).GetName().Version;
+    #endregion
   }
 
 

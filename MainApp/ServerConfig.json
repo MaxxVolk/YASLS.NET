@@ -2,7 +2,7 @@
   "Inputs": {
     "TCP Syslog Listener": {
       "Assembly": null,
-      "Type": "YASLS.NetworkInput",
+      "Type": "YASLS.SyslogInput",
       "ConfigurationFilePath": null,
       "ConfigurationJSON": {
         "Port": 514,
@@ -15,7 +15,7 @@
     },
     "UDP Syslog Listener": {
       "Assembly": null,
-      "Type": "YASLS.NetworkInput",
+      "Type": "YASLS.SyslogInput",
       "ConfigurationFilePath": null,
       "ConfigurationJSON": {
         "Port": 514,
@@ -28,18 +28,6 @@
         "NetworkSource": "UDP Syslog"
       }
     }
-    //  "Assembly": "vCenterLibrary",
-    //  "ModuleType": "vSphere.Logging.Module.HTTPEventIngress",
-    //  "ConfigurationFilePath": null,
-    //  "ConfigurationJSON": {
-    //    "ListeningPort": 8088,
-    //    "UseSecureConnection": false,
-    //    "CertificateThumbprint":  null
-    //  },
-    //  "Attributes": {
-    //    "NetworkSource": "HTTP_VC"
-    //  }
-    //}
   },
   "Queues": {
     "DefaultQueue": {
@@ -83,19 +71,15 @@
     }
   },
   "Assemblies": {
-    "NetAppLibrary": {
-      "AssemblyQualifiedName": "NetApp.Syslog.Parser, Version=1.0.0.0, Culture=neutral, PublicKeyToken=df918a7ca80c8d52",
-      "AssemblyFilePath": "NetApp.Syslog.Parser.dll"
-    },
-    "vCenterLibrary": {
-      "AssemblyQualifiedName": "vSphere.Logging.Module, Version=1.0.0.0, Culture=neutral, PublicKeyToken=df918a7ca80c8d52",
-      "AssemblyFilePath": "vSphere.Logging.Module.dll"
+    "Standard Library": {
+      "AssemblyQualifiedName": "YASLS.Standard.Modules, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null",
+      "AssemblyFilePath": "C:\\Projects\\YASLS .NET Server\\YASLS.Standard.Modules\\bin\\Debug\\YASLS.Standard.Modules.dll"
     }
   },
   "Outputs": {
     "Console Debug Output": {
-      "Assembly": null,
-      "Type": "YASLS.ConsoleOutput",
+      "Assembly": "Standard Library",
+      "Type": "YASLS.Standard.Modules.ConsoleOutput",
       "ConfigurationJSON": {
         "Multiline": true
       }
@@ -459,39 +443,12 @@
               ]
             }
           },
-          "Output": [ "JSON File Output", "Splunk HEC" ],
+          //"Output": [ "JSON File Output", "Splunk HEC" ],
+          "Output": [ "Console Debug Output" ],
           "Attributes": {
             "sourcetype": "daas"
           }
         }
-        //"DetectNetAppMessages": {
-        //  "RegExp": {
-        //    "Or": [ " [\\w*:\\w*:\\w*]:" ]
-        //  },
-        //  "StopIfMatched": true,
-        //  "Parser": {
-        //    "Assembly": "NetAppLibrary",
-        //    "Type": "NetApp.Syslog.Parser.NetAppEventParser",
-        //    "ConfigurationFilePath": null,
-        //    "ConfigurationJSON": null
-        //  },
-        //  "Output": "NetAppFile",
-        //  "Attributes": {
-        //    "sourcetype": "netapp"
-        //  }
-        //},
-        //"DetectHitachiMessages": {
-        //  "RegExp": {
-        //    "Or": [ " SVP Storage: " ]
-        //  },
-        //  "StopIfMatched": true,
-        //  "Output": "HitachiFile"
-        //},
-        //"Unmatched": {
-        //  "Any": true,
-        //  "StopIfMatched": true,
-        //  "Output": "UnmatchedFile"
-        //}
       }
     }
   }

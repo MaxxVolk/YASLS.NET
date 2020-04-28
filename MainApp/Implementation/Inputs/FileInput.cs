@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Reflection;
 using System.Threading;
 using YASLS.SDK.Library;
 
@@ -10,13 +11,13 @@ namespace YASLS
   class FileInput : IInputModule, IServerBind
   {
     protected CancellationToken token;
-    protected List<IQueueModule> OutputQueues = new List<IQueueModule>();
+    protected List<IServerMasterQueue> OutputQueues = new List<IServerMasterQueue>();
     protected Dictionary<string, string> Attributes = new Dictionary<string, string>();
     protected readonly Guid moduleId = Guid.Parse("{C4017BBE-0A88-4A3E-A719-9F4EC3878792}");
     protected ILogger logger = null;
     protected IHealthReporter healthReporter = null;
 
-    public void Initialize(JObject configuration, CancellationToken cancellationToken, Dictionary<string, string> attributes, IEnumerable<IQueueModule> queue)
+    public void Initialize(JObject configuration, CancellationToken cancellationToken, Dictionary<string, string> attributes, IEnumerable<IServerMasterQueue> queue)
     {
 
       if (attributes != null && attributes.Count > 0)
@@ -35,7 +36,7 @@ namespace YASLS
           message.AddAttribute(extraAttr.Key, extraAttr.Value);
         message.AddAttribute("ReciveTimestamp", DateTime.Now);
 
-        foreach (IQueueModule queue in OutputQueues)
+        foreach (IServerMasterQueue queue in OutputQueues)
           queue.Enqueue(message);
 
         Thread.Sleep(2);
@@ -58,6 +59,7 @@ namespace YASLS
       
     }
 
+    #region IModule Implementation
     public string GetModuleName() => GetType().FullName;
 
     public string GetModuleDisplayName() => "File Input Module";
@@ -66,7 +68,10 @@ namespace YASLS
 
     public Guid GetModuleId() => moduleId;
 
-    public void RegisterServices(ILogger logger, IHealthReporter healthReporter, IQueueFactory factory)
+    public Version GetModuleVersion() => Assembly.GetAssembly(GetType()).GetName().Version;
+    #endregion
+
+    public void RegisterServices(ILogger logger, IHealthReporter healthReporter, IQueueFactory factory, IPersistentDataStore persistentStore)
     {
       this.logger = logger;
       this.healthReporter = healthReporter;

@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Reflection;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
@@ -22,6 +23,7 @@ namespace YASLS
     protected IHealthReporter healthReporter = null;
     protected RegExParserConfiguration config;
 
+    #region IModule Implementation
     public string GetModuleDisplayName() => "Regular Expression Parser";
 
     public Guid GetModuleId() => moduleId;
@@ -29,6 +31,9 @@ namespace YASLS
     public string GetModuleName() => GetType().FullName;
 
     public string GetModuleVendor() => "Core YASLS";
+
+    public Version GetModuleVersion() => Assembly.GetAssembly(GetType()).GetName().Version;
+    #endregion
 
     public void Initialize(JObject configuration, CancellationToken cancellationToken)
     {
@@ -116,11 +121,13 @@ namespace YASLS
       }
     }
 
-    public void RegisterServices(ILogger logger, IHealthReporter healthReporter, IQueueFactory queueFactory)
+    #region IServerBind Implementation
+    public void RegisterServices(ILogger logger, IHealthReporter healthReporter, IQueueFactory queueFactory, IPersistentDataStore persistentStore)
     {
       this.logger = logger;
       this.healthReporter = healthReporter;
     }
+    #endregion
   }
 
   [JsonObject]

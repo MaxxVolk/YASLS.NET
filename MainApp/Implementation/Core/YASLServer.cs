@@ -7,7 +7,7 @@ using System.Threading;
 using YASLS.Configuration;
 using YASLS.SDK.Library;
 
-namespace YASLS.Standard.Modules
+namespace YASLS
 {
   public class YASLServer : IModule
   {
@@ -38,13 +38,23 @@ namespace YASLS.Standard.Modules
             MasterQueue newQueue = new MasterQueue(TokenSource.Token, queueDef.Attributes, internalLogger, null, queueFactory);
             MasterQueues.Add(queueCfg.Key, new Tuple<MasterQueue, Thread>(newQueue, new Thread(newQueue.GetWorker())));
 
+            // reference check for future binding
+            IEnumerable<string> missingInputReferences = queueDef.Inputs.Where(i => serverConfiguration.Inputs?.ContainsKey(i) == false);
+            if (missingInputReferences.Any())
+            {
+              string missingList = "";
+              foreach (string missingInput in missingInputReferences) missingList += missingInput + ", ";
+              missingList = missingList.Substring(0, missingList.Length - 2);
+              internalLogger?.LogEvent(this, Severity.Warning, "ServerInit", $"Queue '{queueCfg.Key}' has references to not existing Inputs: {missingList}");
+            }
+
             // add Attribute Extractors to the queue
             if (queueCfg.Value.AttributeExtractors != null)
               foreach (KeyValuePair<string, ModuleDefinition> extractorCfg in queueCfg.Value.AttributeExtractors)
                 try
                 {
                   ModuleDefinition extractorDef = extractorCfg.Value;
-                  IAttributeExtractorModule newExtractorModule = CreateModule<IAttributeExtractorModule>(extractorDef);
+                  IAttributeExtractorModule newExtractorModule = CreateModule<IAttributeExtractorModule>(extractorDef, serverConfiguration.Assemblies);
                   newExtractorModule.Initialize(extractorDef.ConfigurationJSON, extractorDef.Attributes);
                   newQueue.RegisterAttributeExtractor(newExtractorModule);
                 }
@@ -71,13 +81,13 @@ namespace YASLS.Standard.Modules
           try
           {
             ModuleDefinition outputDef = outputCfg.Value;
-            IOutputModule newOutputModule = CreateModule<IOutputModule>(outputDef);
+            IOutputModule newOutputModule = CreateModule<IOutputModule>(outputDef, serverConfiguration.Assemblies);
             newOutputModule.Initialize(outputDef.ConfigurationJSON, TokenSource.Token);
             OutputModules.Add(outputCfg.Key, new Tuple<IOutputModule, Thread>(newOutputModule, new Thread(new ModuleThreadWrapper(newOutputModule, TokenSource.Token).GetThreadEntry())));
           }
           catch (Exception e)
           {
-            internalLogger?.LogEvent(Guid.Empty, Severity.Warning, "OutputInit", $"Failed to load or initialize '{outputCfg.Key ?? "<Unknown>"}' Output module.", e);
+            internalLogger?.LogEvent(this, Severity.Warning, "OutputInit", $"Failed to load or initialize '{outputCfg.Key ?? "<Unknown>"}' Output module.", e);
           }
       if (OutputModules.Count == 0)
       {
@@ -102,14 +112,14 @@ namespace YASLS.Standard.Modules
                   if (filterDef.Parser != null)
                   {
                     ModuleDefinition parserDef = filterDef.Parser;
-                    IParserModule newParserModule = CreateModule<IParserModule>(parserDef);
+                    IParserModule newParserModule = CreateModule<IParserModule>(parserDef, serverConfiguration.Assemblies);
                     newParserModule.Initialize(parserDef.ConfigurationJSON, TokenSource.Token);
                     filterDef.ParserModule = newParserModule;
                   }
                   if (filterDef.Filter != null)
                   {
                     ModuleDefinition filterModuleDef = filterDef.Filter;
-                    IFilterModule filterModule = CreateModule<IFilterModule>(filterModuleDef);
+                    IFilterModule filterModule = CreateModule<IFilterModule>(filterModuleDef, serverConfiguration.Assemblies);
                     filterModule.Initialize(filterModuleDef.ConfigurationJSON, TokenSource.Token);
                     filterDef.FilterModule = filterModule;
                   }
@@ -156,11 +166,8 @@ namespace YASLS.Standard.Modules
           try
           {
             ModuleDefinition inputDef = inputCfg.Value;
-            Type inputModuleType = AssertationHelper.AssertNotNull(GetModuleAssembly(inputDef).GetType(inputDef.ManagedTypeName), () => new Exception($"Type {inputDef.ManagedTypeName ?? "<Unknown>"} not found."));
-            IInputModule newInputModule = (IInputModule)Activator.CreateInstance(inputModuleType);
+            IInputModule newInputModule = CreateModule<IInputModule>(inputDef, serverConfiguration.Assemblies);
             newInputModule.Initialize(inputDef.ConfigurationJSON, TokenSource.Token, inputCfg.Value.Attributes, MasterQueues.Where(z => serverConfiguration.Queues.Where(x => x.Value.Inputs.Contains(inputCfg.Key)).Select(y => y.Key).Contains(z.Key)).Select(t => t.Value.Item1));
-            if (inputModuleType.GetInterface(typeof(IServerBind).FullName) != null)
-              ((IServerBind)newInputModule).RegisterServices(internalLogger, null, queueFactory);
             InputModules.Add(inputCfg.Key, new Tuple<IInputModule, Thread>(newInputModule, new Thread(new ModuleThreadWrapper(newInputModule, TokenSource.Token).GetThreadEntry())));
           }
           catch (Exception e)
@@ -172,14 +179,15 @@ namespace YASLS.Standard.Modules
       #endregion
     }
 
-    protected I CreateModule<I>(ModuleDefinition moduleDefinition) where I: IModule
+    protected I CreateModule<I>(ModuleDefinition moduleDefinition, Dictionary<string, AssemblyDefinition> assemblies) where I: IModule
     {
-      Type moduleType = AssertationHelper.AssertNotNull(GetModuleAssembly(moduleDefinition).GetType(moduleDefinition.ManagedTypeName), () => new Exception($"Type {moduleDefinition.ManagedTypeName ?? "<Unknown>"} not found."));
+      Assembly moduleAssembly = GetModuleAssembly(moduleDefinition, assemblies);
+      Type moduleType = AssertationHelper.AssertNotNull(moduleAssembly.GetType(moduleDefinition.ManagedTypeName), () => new Exception($"Type {moduleDefinition.ManagedTypeName ?? "<Unknown>"} not found."));
       if (moduleType.GetInterface(typeof(I).FullName) == null)
         throw new Exception($"Module doesn't support the requested interface {typeof(I).FullName} interface.");
       I newModuleInstance = (I)Activator.CreateInstance(moduleType);
       if (moduleType.GetInterface(typeof(IServerBind).FullName) != null)
-        ((IServerBind)newModuleInstance).RegisterServices(internalLogger, null, queueFactory);
+        ((IServerBind)newModuleInstance).RegisterServices(internalLogger, null, queueFactory, null);
       return newModuleInstance;
     }
 
@@ -232,11 +240,33 @@ namespace YASLS.Standard.Modules
       }
     }
 
-    protected Assembly GetModuleAssembly(ModuleDefinition inputDef)
+    protected Assembly GetModuleAssembly(ModuleDefinition moduleDefinition, Dictionary<string, AssemblyDefinition> assemblies)
     {
-      if (string.IsNullOrWhiteSpace(inputDef.Assembly))
+      if (string.IsNullOrWhiteSpace(moduleDefinition.Assembly))
         return Assembly.GetExecutingAssembly();
-      throw new NotImplementedException();
+      if (assemblies == null || assemblies.Count == 0)
+        throw new ApplicationException("Assembly collection is empty or not defined, unable to lookup for any assemblies.");
+      KeyValuePair<string, AssemblyDefinition> assemblyConfiguration = assemblies.Where(a => a.Key == moduleDefinition.Assembly).FirstOrDefault();
+      Exception loadByQualifiedNameException;
+      try
+      {
+        return Assembly.Load(assemblyConfiguration.Value.AssemblyQualifiedName);
+      }
+      catch (Exception e)
+      {
+        loadByQualifiedNameException = e;
+      }
+      Exception loadByFileNameException;
+      try
+      {
+        return Assembly.LoadFrom(assemblyConfiguration.Value.AssemblyFilePath);
+      }
+      catch (Exception e)
+      {
+        loadByFileNameException = e;
+      }
+      // if we are here, then both attempts thrown exceptions
+      throw new AggregateException("Unable to located referenced assembly neither by Qualified Name nor File Path. See inner exceptions for details", new Exception[] { loadByQualifiedNameException, loadByFileNameException });
     }
 
     #region IModule Implementation
@@ -247,6 +277,8 @@ namespace YASLS.Standard.Modules
     public string GetModuleVendor() => "Core YASLS";
 
     public Guid GetModuleId() => moduleId;
+
+    public Version GetModuleVersion() => Assembly.GetAssembly(GetType()).GetName().Version;
     #endregion
   }
 

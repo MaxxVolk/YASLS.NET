@@ -23,6 +23,9 @@ namespace YASLS.Configuration
 
     [JsonProperty]
     public Dictionary<string, RouteDefinition> Routing { get; set; }
+
+    [JsonProperty]
+    public Dictionary<string, AssemblyDefinition> Assemblies { get; set; }
   }
 
   public class ModuleDefinition
@@ -41,5 +44,14 @@ namespace YASLS.Configuration
 
     [JsonProperty("Attributes")]
     public Dictionary<string, string> Attributes { get; set; }
+  }
+
+  public class AssemblyDefinition
+  {
+    [JsonProperty("AssemblyQualifiedName")]
+    public string AssemblyQualifiedName { get; set; }
+
+    [JsonProperty("AssemblyFilePath")]
+    public string AssemblyFilePath { get; set; }
   }
 }

@@ -1,12 +1,13 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Reflection;
 using System.Threading;
 using YASLS.SDK.Library;
 
 namespace YASLS
 {
-  public class MasterQueue : IQueueModule, IModule
+  public class MasterQueue : IServerMasterQueue, IModule
   {
     protected readonly Guid moduleId = Guid.Parse("{72E29AEC-E94B-4295-A491-0167516C5F4B}");
     protected IMessageQueue Messages;
@@ -30,7 +31,7 @@ namespace YASLS
 
     public void Enqueue(MessageDataItem message)
     {
-      Messages.Enqueue(message);
+      Messages.Enqueue(message.Clone());
     }
 
     protected void WorkerProc()
@@ -50,7 +51,7 @@ namespace YASLS
             }
             catch (Exception e)
             {
-              eventLogger?.LogEvent(Guid.Empty, Severity.Error, "ExtractorInvoke", $"Failed to execute extractor {extractor.GetType().FullName}.", e);
+              eventLogger?.LogEvent(this, Severity.Error, "ExtractorInvoke", $"Failed to execute extractor {extractor.GetType().FullName}.", e);
             }
           foreach (Route route in Routes)
           {
@@ -78,6 +79,7 @@ namespace YASLS
       Routes.Add(route);
     }
 
+    #region IModule Implementation
     public string GetModuleName() => GetType().FullName;
 
     public string GetModuleDisplayName() => "Main Queue Module";
@@ -85,5 +87,8 @@ namespace YASLS
     public string GetModuleVendor() => "Core YASLS";
 
     public Guid GetModuleId() => moduleId;
+
+    public Version GetModuleVersion() => Assembly.GetAssembly(GetType()).GetName().Version;
+    #endregion
   }
 }
