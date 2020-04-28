@@ -90,9 +90,9 @@ namespace YASLS
             tcpAsyncAcceptResult.ContinueWith(new Func<Task<Socket>, object, Task>(SingleHostReceiver), new ConnectionState { }, token);
             tcpAsyncAcceptResult.Wait(token);
           }
-          catch (Exception e)
+          catch (OperationCanceledException)
           {
-            throw e;
+            break;
           }
         }
       }

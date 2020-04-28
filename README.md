@@ -24,6 +24,12 @@ The data flow within the server is the following:
 
 ==> Input Modules (M):(N) Queues => (1):(K) Routers => (1):(1) Filter (Always/RegExp/Filter Module) => (1):(1) Parser => (R):(L) Output Modules
 
+### Treading Model ###
+
+* Each Input and Output module runs in its own thread.
+* Each Queue runs in its own thread together with any Attribute Extractor Modules attached (i.e. attribute extractors running within the same thread as the main queue process).
+* Each Route runs in its own thread together with optional Filter and Parser Modules.
+
 ## Configuration ##
 
 Server configuration file is a JSON structured file. For users convenience, a JSON schema is supplied with the server. 
