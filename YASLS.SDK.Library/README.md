@@ -46,7 +46,7 @@ Restart a module if it encounters an exception of finishes and need to re-connec
       }
       finally
       {
-        socket?.Close();
+        // free up resources
       }
 ```
 ### Module Initialization ###

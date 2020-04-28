@@ -24,6 +24,18 @@ The data flow within the server is the following:
 
 ==> Input Modules (M):(N) Queues => (1):(K) Routers => (1):(1) Filter (Always/RegExp/Filter Module) => (1):(1) Parser => (R):(L) Output Modules
 
+## Standard Modules ##
+### Released Modules ###
+* Syslog Input Module (TCP and UDP transport supported, TLS support is planned)
+* Console Debug Output Module
+* Syslog Facility and Severity Code Attribute Extractor Module
+* Reverse DNS Lookup Attribute Extractor Module
+* Splunk HTTP Event Collector Output Module
+* Regular Expression Parser Module (probably the only parser you need).
+### Modules in planning / beta ###
+* File Input Module
+* File Output Module
+
 ### Treading Model ###
 
 * Each Input and Output module runs in its own thread.
@@ -52,3 +64,117 @@ While queues can intermix events from different inputs, the next element -- rout
   * Apply custom filtering module.
 * Parse message/event with an optional parsing module. NB! Parsing module's output not necessarily one-to-one for input and output messages. A parsing module can drop some or all events, and output events may not be directly related to input. Possible scenarios include statistic analysis of inbound flow with just summary output, or valve type flow control on an external signal, etc.
 * Send events to one or more output modules. Like input modules and queues, any number of routes can send events to any number of output modules in any combination.
+
+## Standard Modules Description ##
+
+### Regular Expression Parser Module ###
+
+Example configuration:
+
+```json
+          "Parser": {
+            "Assembly": null,
+            "Type": "YASLS.RegExParser",
+            "ConfigurationJSON": {
+              "ParsingExpressions": [
+                {
+                  "MatchingRegEx": null,
+                  "ParsingRegEx": "(?<name>(?:\"(?<name1>[^\"]*)\"|[^=,| ])*)\\s*=\\s*(?<value>(?:\"[^\"]*\"|[^=,| ])*)",
+                  "StopIfMatched": false,
+                  "MultiMatch": true,
+                  "FieldSettings": [
+                    {
+                      "Input": {
+                        "Group": "value",
+                        "Type": "String",
+                        "GroupToOutputAttribute": "name"
+                      }
+                    },
+                    {
+                  "MatchingRegEx": "\\<(?<PRIVAL>\\d{1,3})\\>(?<SYSLOGTIME>(\\w{3} \\d{1,2} \\d{1,2}:\\d{1,2}:\\d{1,2})) (?<HOST>\\w+) ",
+                  "ParsingRegEx": "\\<(?<PRIVAL>\\d{1,3})\\>(?<SYSLOGTIME>(\\w{3} \\d{1,2} \\d{1,2}:\\d{1,2}:\\d{1,2})) (?<HOST>\\w+) ",
+                  "FieldSettings": [
+                    // keep the original message as it is
+                    {
+                      "Input": {
+                        "Message": true
+                      },
+                      "OutputAttribute": null
+                    },
+                    // add attributes
+                    {
+                      "Input": {
+                        "Group": "HOST",
+                        "Type": "String"
+                      },
+                      "OutputAttribute": "Host"
+                    },
+                    {
+                      "Input": {
+                        "Group": "SYSLOGTIME",
+                        "Type": "String"
+                      },
+                      "OutputAttribute": "SyslogTime"
+                    }
+                  ]
+                }
+                  ]
+                }
+              ],
+              // for all messages
+              "DefaultFieldSettings": [
+                {
+                  "Input": {
+                    "Attribute": "Facility"
+                  },
+                  "OutputAttribute": "SyslogFacility"
+                },
+                {
+                  "Input": {
+                    "Attribute": "Severity"
+                  },
+                  "OutputAttribute": "SyslogSeverity"
+                },
+                {
+                  "Input": {
+                    "Value": "daas",
+                    "Type": "String"
+                  },
+                  "OutputAttribute": "source"
+                },
+                {
+                  "Input": {
+                    "Value": "_json",
+                    "Type": "String"
+                  },
+                  "OutputAttribute": "sourcetype"
+                }
+              ],
+              // for not parsed messages
+              "PassthroughFieldSettings": [
+                // keep the original message as it is
+                {
+                  "Input": {
+                    "Message": true
+                  },
+                  "OutputAttribute": null
+                },
+                // add attributes
+                {
+                  "Input": {
+                    "Attribute": "SenderHostName"
+                  },
+                  "OutputAttribute": "Host"
+                },
+                {
+                  "Input": {
+                    "Attribute": "ReciveTimestamp",
+                    "Type": "DateTime"
+                  },
+                  "OutputAttribute": "EventTimestamp"
+                }
+              ]
+            }
+          }
+```
+
