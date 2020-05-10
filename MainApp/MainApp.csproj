@@ -50,6 +50,10 @@
     <Compile Include="..\..\_Shared Code\Helpers\ServiceHelper.cs">
       <Link>ServiceHelper.cs</Link>
     </Compile>
+    <Compile Include="Configuration\Expression.cs" />
+    <Compile Include="Implementation\Core\BaseInternalModule.cs" />
+    <Compile Include="Implementation\Core\Filter.cs" />
+    <Compile Include="Implementation\Core\Parser.cs" />
     <Compile Include="Implementation\Core\QueueFactory.cs" />
     <Compile Include="Implementation\Inputs\FileInput.cs" />
     <Compile Include="Implementation\Outputs\FileOutput.cs" />

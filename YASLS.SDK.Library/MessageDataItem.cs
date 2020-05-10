@@ -156,5 +156,111 @@ namespace YASLS.SDK.Library
       }
       return "<Unknown Value Type>";
     }
+
+    public static bool operator ==(Variant a, Variant b)
+    {
+      if (a == null || b == null)
+        return false;
+      if (a == null && b == null)
+        return true;
+      if (a.Type != b.Type)
+        throw new InvalidCastException("Cannot compare Variant of different type");
+      switch (a.Type)
+      {
+        case VariantType.String: return a.StringValue == b.StringValue;
+        case VariantType.Boolean: return a.BooleanValue == b.BooleanValue;
+        case VariantType.DateTime: return a.DateTimeValue == b.DateTimeValue;
+        case VariantType.Float: return a.FloatValue == b.FloatValue;
+        case VariantType.Int: return a.IntValue == b.IntValue;
+      }
+      return false;
+    }
+
+    public static bool operator !=(Variant a, Variant b)
+    {
+      if (a == null && b == null)
+        return false;
+      if (a == null || b == null)
+        return true;
+      if (a.Type != b.Type)
+        throw new InvalidCastException("Cannot compare Variant of different type");
+      switch (a.Type)
+      {
+        case VariantType.String: return a.StringValue != b.StringValue;
+        case VariantType.Boolean: return a.BooleanValue != b.BooleanValue;
+        case VariantType.DateTime: return a.DateTimeValue != b.DateTimeValue;
+        case VariantType.Float: return a.FloatValue != b.FloatValue;
+        case VariantType.Int: return a.IntValue != b.IntValue;
+      }
+      return false;
+    }
+
+    public static bool operator >=(Variant a, Variant b)
+    {
+      if (a == null || b == null)
+        return false;
+      if (a.Type != b.Type)
+        throw new InvalidCastException("Cannot compare Variant of different type");
+      switch (a.Type)
+      {
+        case VariantType.String: return a.StringValue.CompareTo(b.StringValue) > 0 || a.StringValue.CompareTo(b.StringValue) == 0;
+        case VariantType.Boolean: return (a.BooleanValue && !b.BooleanValue) || (a.BooleanValue == b.BooleanValue) ? true : false;
+        case VariantType.DateTime: return a.DateTimeValue >= b.DateTimeValue;
+        case VariantType.Float: return a.FloatValue >= b.FloatValue;
+        case VariantType.Int: return a.IntValue >= b.IntValue;
+      }
+      return false;
+    }
+
+    public static bool operator <=(Variant a, Variant b)
+    {
+      if (a == null || b == null)
+        return false;
+      if (a.Type != b.Type)
+        throw new InvalidCastException("Cannot compare Variant of different type");
+      switch (a.Type)
+      {
+        case VariantType.String: return a.StringValue.CompareTo(b.StringValue) < 0 || a.StringValue.CompareTo(b.StringValue) == 0;
+        case VariantType.Boolean: return (!a.BooleanValue && b.BooleanValue) || (a.BooleanValue == b.BooleanValue) ? true : false;
+        case VariantType.DateTime: return a.DateTimeValue <= b.DateTimeValue;
+        case VariantType.Float: return a.FloatValue <= b.FloatValue;
+        case VariantType.Int: return a.IntValue <= b.IntValue;
+      }
+      return false;
+    }
+
+    public static bool operator >(Variant a, Variant b)
+    {
+      if (a == null || b == null)
+        return false;
+      if (a.Type != b.Type)
+        throw new InvalidCastException("Cannot compare Variant of different type");
+      switch (a.Type)
+      {
+        case VariantType.String: return a.StringValue.CompareTo(b.StringValue) > 0;
+        case VariantType.Boolean: return a.BooleanValue && !b.BooleanValue ? true : false;
+        case VariantType.DateTime: return a.DateTimeValue > b.DateTimeValue;
+        case VariantType.Float: return a.FloatValue > b.FloatValue;
+        case VariantType.Int: return a.IntValue > b.IntValue;
+      }
+      return false;
+    }
+
+    public static bool operator <(Variant a, Variant b)
+    {
+      if (a == null || b == null)
+        return false;
+      if (a.Type != b.Type)
+        throw new InvalidCastException("Cannot compare Variant of different type");
+      switch (a.Type)
+      {
+        case VariantType.String: return a.StringValue.CompareTo(b.StringValue) < 0;
+        case VariantType.Boolean: return !a.BooleanValue && b.BooleanValue ? true : false;
+        case VariantType.DateTime: return a.DateTimeValue < b.DateTimeValue;
+        case VariantType.Float: return a.FloatValue < b.FloatValue;
+        case VariantType.Int: return a.IntValue < b.IntValue;
+      }
+      return false;
+    }
   }
 }

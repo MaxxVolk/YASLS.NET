@@ -121,332 +121,432 @@
       "InputQueue": "DefaultQueue",
       "Filters": {
         "AllMatched": {
-          "AllMessages": true,
           "StopIfMatched": false,
           "Parser": {
-            "Assembly": null,
-            "Type": "YASLS.RegExParser",
-            "ConfigurationJSON": {
-              "ParsingExpressions": [
-                {
-                  "MatchingRegEx": null,
-                  "ParsingRegEx": "(?<name>(?:\"(?<name1>[^\"]*)\"|[^=,| ])*)\\s*=\\s*(?<value>(?:\"[^\"]*\"|[^=,| ])*)",
-                  "StopIfMatched": false,
-                  "MultiMatch": true,
-                  "FieldSettings": [
-                    {
-                      "Input": {
-                        "Group": "value",
-                        "Type": "String",
-                        "GroupToOutputAttribute": "name"
+            "ParsingModule": {
+              "Assembly": null,
+              "Type": "YASLS.RegExParser",
+              "ConfigurationJSON": {
+                "ParsingExpressions": [
+                  {
+                    "MatchingRegEx": null,
+                    "ParsingRegEx": "(?<name>(?:\"(?<name1>[^\"]*)\"|[^=,| ])*)\\s*=\\s*(?<value>(?:\"[^\"]*\"|[^=,| ])*)",
+                    "StopIfMatched": false,
+                    "MultiMatch": true,
+                    "FieldSettings": [
+                      {
+                        "Input": {
+                          "Group": "value",
+                          "Type": "String",
+                          "GroupToOutputAttribute": "name"
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    "MatchingRegEx": "\\<(?<PRIVAL>\\d{1,3})\\>(?<SYSLOGTIME>(\\w{3} \\d{1,2} \\d{1,2}:\\d{1,2}:\\d{1,2})) (?<HOST>\\w+) (?<COMPONENT>desktone)",
+                    "ParsingRegEx": "\\<(?<PRIVAL>\\d{1,3})\\>(?<SYSLOGTIME>(\\w{3} \\d{1,2} \\d{1,2}:\\d{1,2}:\\d{1,2})) (?<HOST>\\w+) (?<COMPONENT>desktone)(\\s+(?<TIMESTAMP>(\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}:\\d{2},\\d{3}))\\s+(?<LEVEL>\\w+)\\s+\\[(?<TYPE>(\\S+))\\]-\\[(?<INSTANCE>(\\S+))\\]){0,1}\\s+(?<MESSAGE>(.*))",
+                    "FieldSettings": [
+                      // keep the original message as it is
+                      {
+                        "Input": {
+                          "Message": true
+                        },
+                        "OutputAttribute": null
+                      },
+                      // add attributes
+                      {
+                        "Input": {
+                          "Group": "HOST",
+                          "Type": "String"
+                        },
+                        "OutputAttribute": "Host"
+                      },
+                      {
+                        "Input": {
+                          "Group": "TIMESTAMP",
+                          "Type": "DateTime",
+                          "Format": "yyyy-MM-dd H:mm:ss,FFF"
+                        },
+                        "OutputAttribute": "EventTimestamp"
+                      },
+                      {
+                        "Input": {
+                          "Group": "LEVEL",
+                          "Type": "String"
+                        },
+                        "OutputAttribute": "Severity"
+                      },
+                      {
+                        "Input": {
+                          "Group": "TYPE",
+                          "Type": "String"
+                        },
+                        "OutputAttribute": "Type"
+                      },
+                      {
+                        "Input": {
+                          "Group": "INSTANCE",
+                          "Type": "String"
+                        },
+                        "OutputAttribute": "Instance"
+                      },
+                      {
+                        "Input": {
+                          "Group": "SYSLOGTIME",
+                          "Type": "String"
+                        },
+                        "OutputAttribute": "SyslogTime"
+                      },
+                      {
+                        "Input": {
+                          "Group": "COMPONENT",
+                          "Type": "String"
+                        },
+                        "OutputAttribute": "Component"
+                      }
+                    ]
+                  },
+                  {
+                    "MatchingRegEx": "\\<(?<PRIVAL>\\d{1,3})\\>(?<SYSLOGTIME>(\\w{3} \\d{1,2} \\d{1,2}:\\d{1,2}:\\d{1,2})) (?<HOST>\\w+) (?<COMPONENT>CRON)\\[(?<PID>(\\d+))\\]:",
+                    "ParsingRegEx": "\\<(?<PRIVAL>\\d{1,3})\\>(?<SYSLOGTIME>(\\w{3} \\d{1,2} \\d{1,2}:\\d{1,2}:\\d{1,2})) (?<HOST>\\w+) (?<COMPONENT>CRON)\\[(?<PID>(\\d+))\\]: (?<MESSAGE>(.*))",
+                    "FieldSettings": [
+                      // keep the original message as it is
+                      {
+                        "Input": {
+                          "Message": true
+                        },
+                        "OutputAttribute": null
+                      },
+                      // add attributes
+                      {
+                        "Input": {
+                          "Group": "HOST",
+                          "Type": "String"
+                        },
+                        "OutputAttribute": "Host"
+                      },
+                      {
+                        "Input": {
+                          "Attribute": "ReciveTimestamp"
+                        },
+                        "OutputAttribute": "EventTimestamp"
+                      },
+                      {
+                        "Input": {
+                          "Value": "UNKNOWN",
+                          "Type": "String"
+                        },
+                        "OutputAttribute": "Severity"
+                      },
+                      {
+                        "Input": {
+                          "Group": "SYSLOGTIME",
+                          "Type": "String"
+                        },
+                        "OutputAttribute": "SyslogTime"
+                      },
+                      {
+                        "Input": {
+                          "Group": "COMPONENT",
+                          "Type": "String"
+                        },
+                        "OutputAttribute": "Component"
+                      },
+                      {
+                        "Input": {
+                          "Group": "PID",
+                          "Type": "String"
+                        },
+                        "OutputAttribute": "PID"
+                      }
+                    ]
+                  },
+                  {
+                    "MatchingRegEx": "\\<(?<PRIVAL>\\d{1,3})\\>(?<SYSLOGTIME>(\\w{3} \\d{1,2} \\d{1,2}:\\d{1,2}:\\d{1,2})) (?<HOST>\\w+) (?<COMPONENT>slon_fdb)",
+                    "ParsingRegEx": "\\<(?<PRIVAL>\\d{1,3})\\>(?<SYSLOGTIME>(\\w{3} \\d{1,2} \\d{1,2}:\\d{1,2}:\\d{1,2})) (?<HOST>\\w+) (?<COMPONENT>slon_fdb)\\[(?<PID>(\\d+))\\]: \\[(?<ID1>([\\s\\S^\\]]*))\\] \\[(?<ID2>([\\s\\S^\\]]*))\\] (?<LEVEL>(\\w*))\\s*(?<MESSAGE>(.*))",
+                    "FieldSettings": [
+                      // keep the original message as it is
+                      {
+                        "Input": {
+                          "Message": true
+                        },
+                        "OutputAttribute": null
+                      },
+                      // add attributes
+                      {
+                        "Input": {
+                          "Group": "HOST",
+                          "Type": "String"
+                        },
+                        "OutputAttribute": "Host"
+                      },
+                      {
+                        "Input": {
+                          "Attribute": "ReciveTimestamp"
+                        },
+                        "OutputAttribute": "EventTimestamp"
+                      },
+                      {
+                        "Input": {
+                          "Group": "LEVEL",
+                          "Type": "String"
+                        },
+                        "OutputAttribute": "Severity"
+                      },
+                      {
+                        "Input": {
+                          "Group": "SYSLOGTIME",
+                          "Type": "String"
+                        },
+                        "OutputAttribute": "SyslogTime"
+                      },
+                      {
+                        "Input": {
+                          "Group": "COMPONENT",
+                          "Type": "String"
+                        },
+                        "OutputAttribute": "Component"
+                      },
+                      {
+                        "Input": {
+                          "Group": "PID",
+                          "Type": "String"
+                        },
+                        "OutputAttribute": "PID"
+                      },
+                      {
+                        "Input": {
+                          "Group": "ID1",
+                          "Type": "String"
+                        },
+                        "OutputAttribute": "ID1"
+                      },
+                      {
+                        "Input": {
+                          "Group": "ID2",
+                          "Type": "String"
+                        },
+                        "OutputAttribute": "ID2"
+                      }
+                    ]
+                  },
+                  {
+                    "MatchingRegEx": "\\<(?<PRIVAL>\\d{1,3})\\>(?<SYSLOGTIME>(\\w{3} \\d{1,2} \\d{1,2}:\\d{1,2}:\\d{1,2})) (?<HOST>\\w+) (?<COMPONENT>(crmd|pengine))",
+                    "ParsingRegEx": "\\<(?<PRIVAL>\\d{1,3})\\>(?<SYSLOGTIME>(\\w{3} \\d{1,2} \\d{1,2}:\\d{1,2}:\\d{1,2})) (?<HOST>\\w+) (?<COMPONENT>(crmd|pengine))\\[(?<PID>(\\d+))\\]:\\s* (?<LEVEL>(\\w*)):\\s*(?<MESSAGE>(.*))",
+                    "RegExOptions": [ "None" ], // Refer to System.Text.RegularExpressions.RegexOptions
+                    "FieldSettings": [
+                      // keep the original message as it is
+                      {
+                        "Input": {
+                          "Message": true
+                        },
+                        "OutputAttribute": null
+                      },
+                      // add attributes
+                      {
+                        "Input": {
+                          "Group": "HOST",
+                          "Type": "String"
+                        },
+                        "OutputAttribute": "Host"
+                      },
+                      {
+                        "Input": {
+                          "Attribute": "ReciveTimestamp"
+                        },
+                        "OutputAttribute": "EventTimestamp"
+                      },
+                      {
+                        "Input": {
+                          "Group": "LEVEL",
+                          "Type": "String"
+                        },
+                        "OutputAttribute": "Severity"
+                      },
+                      {
+                        "Input": {
+                          "Group": "SYSLOGTIME",
+                          "Type": "String"
+                        },
+                        "OutputAttribute": "SyslogTime"
+                      },
+                      {
+                        "Input": {
+                          "Group": "COMPONENT",
+                          "Type": "String"
+                        },
+                        "OutputAttribute": "Component"
+                      },
+                      {
+                        "Input": {
+                          "Group": "PID",
+                          "Type": "String"
+                        },
+                        "OutputAttribute": "PID"
+                      }
+                    ]
+                  }
+                ],
+                // for all messages
+                "DefaultFieldSettings": [
+                  {
+                    "Input": {
+                      "Attribute": "Facility"
+                    },
+                    "OutputAttribute": "SyslogFacility"
+                  },
+                  {
+                    "Input": {
+                      "Attribute": "Severity"
+                    },
+                    "OutputAttribute": "SyslogSeverity"
+                  },
+                  {
+                    "Input": {
+                      "Value": "daas",
+                      "Type": "String"
+                    },
+                    "OutputAttribute": "source"
+                  },
+                  {
+                    "Input": {
+                      "Value": "_json",
+                      "Type": "String"
+                    },
+                    "OutputAttribute": "sourcetype"
+                  }
+                ],
+                // for not parsed messages
+                "PassthroughFieldSettings": [
+                  // keep the original message as it is
+                  {
+                    "Input": {
+                      "Message": true
+                    },
+                    "OutputAttribute": null
+                  },
+                  // add attributes
+                  {
+                    "Input": {
+                      "Attribute": "SenderHostName"
+                    },
+                    "OutputAttribute": "Host"
+                  },
+                  {
+                    "Input": {
+                      "Attribute": "ReciveTimestamp",
+                      "Type": "DateTime"
+                    },
+                    "OutputAttribute": "EventTimestamp"
+                  }
+                ]
+              }
+            },
+            "Output": [ "Console Debug Output" ]
+          }
+        }
+      }
+    },
+    "Test Route": {
+      "InputQueue": "DefaultQueue",
+      "Filters": {
+        "First Branch": {
+          "Expression": {
+            "And": [
+              {
+                "SimpleExpression": {
+                  "FirstValue": {
+                    "Attribute": {
+                      "Name": "XXX",
+                      "Type": "DateTime"
+                    }
+                  },
+                  "Operator": "GreaterEqual",
+                  "SecondValue": { "Value": { "DateTimeValue": "2222-04-04T11:11:11.0+12:00" } } // local NZ time
+                }
+              },
+              {
+                "Or": [
+                  {
+                    "SimpleExpression": {
+                      "FirstValue": {
+                        "Attribute": {
+                          "Name": "TTT",
+                          "Type": "Boolean"
+                        }
+                      },
+                      "Operator": "Equal",
+                      "SecondValue": { "Value": { "BooleanValue": false } }
+                    }
+                  },
+                  {
+                    "Not": {
+                      "SimpleExpression": {
+                        "FirstValue": {
+                          "Attribute": {
+                            "Name": "HHH",
+                            "Type": "Int"
+                          }
+                        },
+                        "Operator": "GreaterEqual",
+                        "SecondValue": { "Value": { "IntValue": 5 } }
                       }
                     }
-                  ]
-                },
-                {
-                  "MatchingRegEx": "\\<(?<PRIVAL>\\d{1,3})\\>(?<SYSLOGTIME>(\\w{3} \\d{1,2} \\d{1,2}:\\d{1,2}:\\d{1,2})) (?<HOST>\\w+) (?<COMPONENT>desktone)",
-                  "ParsingRegEx": "\\<(?<PRIVAL>\\d{1,3})\\>(?<SYSLOGTIME>(\\w{3} \\d{1,2} \\d{1,2}:\\d{1,2}:\\d{1,2})) (?<HOST>\\w+) (?<COMPONENT>desktone)(\\s+(?<TIMESTAMP>(\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}:\\d{2},\\d{3}))\\s+(?<LEVEL>\\w+)\\s+\\[(?<TYPE>(\\S+))\\]-\\[(?<INSTANCE>(\\S+))\\]){0,1}\\s+(?<MESSAGE>(.*))",
-                  "FieldSettings": [
-                    // keep the original message as it is
-                    {
-                      "Input": {
-                        "Message": true
-                      },
-                      "OutputAttribute": null
-                    },
-                    // add attributes
-                    {
-                      "Input": {
-                        "Group": "HOST",
-                        "Type": "String"
-                      },
-                      "OutputAttribute": "Host"
-                    },
-                    {
-                      "Input": {
-                        "Group": "TIMESTAMP",
-                        "Type": "DateTime",
-                        "Format": "yyyy-MM-dd H:mm:ss,FFF"
-                      },
-                      "OutputAttribute": "EventTimestamp"
-                    },
-                    {
-                      "Input": {
-                        "Group": "LEVEL",
-                        "Type": "String"
-                      },
-                      "OutputAttribute": "Severity"
-                    },
-                    {
-                      "Input": {
-                        "Group": "TYPE",
-                        "Type": "String"
-                      },
-                      "OutputAttribute": "Type"
-                    },
-                    {
-                      "Input": {
-                        "Group": "INSTANCE",
-                        "Type": "String"
-                      },
-                      "OutputAttribute": "Instance"
-                    },
-                    {
-                      "Input": {
-                        "Group": "SYSLOGTIME",
-                        "Type": "String"
-                      },
-                      "OutputAttribute": "SyslogTime"
-                    },
-                    {
-                      "Input": {
-                        "Group": "COMPONENT",
-                        "Type": "String"
-                      },
-                      "OutputAttribute": "Component"
-                    }
-                  ]
-                },
-                {
-                  "MatchingRegEx": "\\<(?<PRIVAL>\\d{1,3})\\>(?<SYSLOGTIME>(\\w{3} \\d{1,2} \\d{1,2}:\\d{1,2}:\\d{1,2})) (?<HOST>\\w+) (?<COMPONENT>CRON)\\[(?<PID>(\\d+))\\]:",
-                  "ParsingRegEx": "\\<(?<PRIVAL>\\d{1,3})\\>(?<SYSLOGTIME>(\\w{3} \\d{1,2} \\d{1,2}:\\d{1,2}:\\d{1,2})) (?<HOST>\\w+) (?<COMPONENT>CRON)\\[(?<PID>(\\d+))\\]: (?<MESSAGE>(.*))",
-                  "FieldSettings": [
-                    // keep the original message as it is
-                    {
-                      "Input": {
-                        "Message": true
-                      },
-                      "OutputAttribute": null
-                    },
-                    // add attributes
-                    {
-                      "Input": {
-                        "Group": "HOST",
-                        "Type": "String"
-                      },
-                      "OutputAttribute": "Host"
-                    },
-                    {
-                      "Input": {
-                        "Attribute": "ReciveTimestamp"
-                      },
-                      "OutputAttribute": "EventTimestamp"
-                    },
-                    {
-                      "Input": {
-                        "Value": "UNKNOWN",
-                        "Type": "String"
-                      },
-                      "OutputAttribute": "Severity"
-                    },
-                    {
-                      "Input": {
-                        "Group": "SYSLOGTIME",
-                        "Type": "String"
-                      },
-                      "OutputAttribute": "SyslogTime"
-                    },
-                    {
-                      "Input": {
-                        "Group": "COMPONENT",
-                        "Type": "String"
-                      },
-                      "OutputAttribute": "Component"
-                    },
-                    {
-                      "Input": {
-                        "Group": "PID",
-                        "Type": "String"
-                      },
-                      "OutputAttribute": "PID"
-                    }
-                  ]
-                },
-                {
-                  "MatchingRegEx": "\\<(?<PRIVAL>\\d{1,3})\\>(?<SYSLOGTIME>(\\w{3} \\d{1,2} \\d{1,2}:\\d{1,2}:\\d{1,2})) (?<HOST>\\w+) (?<COMPONENT>slon_fdb)",
-                  "ParsingRegEx": "\\<(?<PRIVAL>\\d{1,3})\\>(?<SYSLOGTIME>(\\w{3} \\d{1,2} \\d{1,2}:\\d{1,2}:\\d{1,2})) (?<HOST>\\w+) (?<COMPONENT>slon_fdb)\\[(?<PID>(\\d+))\\]: \\[(?<ID1>([\\s\\S^\\]]*))\\] \\[(?<ID2>([\\s\\S^\\]]*))\\] (?<LEVEL>(\\w*))\\s*(?<MESSAGE>(.*))",
-                  "FieldSettings": [
-                    // keep the original message as it is
-                    {
-                      "Input": {
-                        "Message": true
-                      },
-                      "OutputAttribute": null
-                    },
-                    // add attributes
-                    {
-                      "Input": {
-                        "Group": "HOST",
-                        "Type": "String"
-                      },
-                      "OutputAttribute": "Host"
-                    },
-                    {
-                      "Input": {
-                        "Attribute": "ReciveTimestamp"
-                      },
-                      "OutputAttribute": "EventTimestamp"
-                    },
-                    {
-                      "Input": {
-                        "Group": "LEVEL",
-                        "Type": "String"
-                      },
-                      "OutputAttribute": "Severity"
-                    },
-                    {
-                      "Input": {
-                        "Group": "SYSLOGTIME",
-                        "Type": "String"
-                      },
-                      "OutputAttribute": "SyslogTime"
-                    },
-                    {
-                      "Input": {
-                        "Group": "COMPONENT",
-                        "Type": "String"
-                      },
-                      "OutputAttribute": "Component"
-                    },
-                    {
-                      "Input": {
-                        "Group": "PID",
-                        "Type": "String"
-                      },
-                      "OutputAttribute": "PID"
-                    },
-                    {
-                      "Input": {
-                        "Group": "ID1",
-                        "Type": "String"
-                      },
-                      "OutputAttribute": "ID1"
-                    },
-                    {
-                      "Input": {
-                        "Group": "ID2",
-                        "Type": "String"
-                      },
-                      "OutputAttribute": "ID2"
-                    }
-                  ]
-                },
-                {
-                  "MatchingRegEx": "\\<(?<PRIVAL>\\d{1,3})\\>(?<SYSLOGTIME>(\\w{3} \\d{1,2} \\d{1,2}:\\d{1,2}:\\d{1,2})) (?<HOST>\\w+) (?<COMPONENT>(crmd|pengine))",
-                  "ParsingRegEx": "\\<(?<PRIVAL>\\d{1,3})\\>(?<SYSLOGTIME>(\\w{3} \\d{1,2} \\d{1,2}:\\d{1,2}:\\d{1,2})) (?<HOST>\\w+) (?<COMPONENT>(crmd|pengine))\\[(?<PID>(\\d+))\\]:\\s* (?<LEVEL>(\\w*)):\\s*(?<MESSAGE>(.*))",
-                  "RegExOptions": [ "None" ], // Refer to System.Text.RegularExpressions.RegexOptions
-                  "FieldSettings": [
-                    // keep the original message as it is
-                    {
-                      "Input": {
-                        "Message": true
-                      },
-                      "OutputAttribute": null
-                    },
-                    // add attributes
-                    {
-                      "Input": {
-                        "Group": "HOST",
-                        "Type": "String"
-                      },
-                      "OutputAttribute": "Host"
-                    },
-                    {
-                      "Input": {
-                        "Attribute": "ReciveTimestamp"
-                      },
-                      "OutputAttribute": "EventTimestamp"
-                    },
-                    {
-                      "Input": {
-                        "Group": "LEVEL",
-                        "Type": "String"
-                      },
-                      "OutputAttribute": "Severity"
-                    },
-                    {
-                      "Input": {
-                        "Group": "SYSLOGTIME",
-                        "Type": "String"
-                      },
-                      "OutputAttribute": "SyslogTime"
-                    },
-                    {
-                      "Input": {
-                        "Group": "COMPONENT",
-                        "Type": "String"
-                      },
-                      "OutputAttribute": "Component"
-                    },
-                    {
-                      "Input": {
-                        "Group": "PID",
-                        "Type": "String"
-                      },
-                      "OutputAttribute": "PID"
-                    }
-                  ]
+                  }
+                ]
+              },
+              {
+                "Exists": {
+                  "Attribute": {
+                    "Name": "EEEE",
+                    "Type": "Float"
+                  }
                 }
-              ],
-              // for all messages
-              "DefaultFieldSettings": [
-                {
-                  "Input": {
-                    "Attribute": "Facility"
+              },
+              {
+                "InExpression": {
+                  "FirstValue": {
+                    "Attribute": {
+                      "Name": "HHH",
+                      "Type": "Float"
+                    }
                   },
-                  "OutputAttribute": "SyslogFacility"
-                },
-                {
-                  "Input": {
-                    "Attribute": "Severity"
-                  },
-                  "OutputAttribute": "SyslogSeverity"
-                },
-                {
-                  "Input": {
-                    "Value": "daas",
-                    "Type": "String"
-                  },
-                  "OutputAttribute": "source"
-                },
-                {
-                  "Input": {
-                    "Value": "_json",
-                    "Type": "String"
-                  },
-                  "OutputAttribute": "sourcetype"
+                  "Operator": "In",
+                  "SecondValue": {
+                    "List": [
+                      { "Value": { "IntValue": 1 } },
+                      { "Value": { "IntValue": 4 } }
+                    ]
+                  }
                 }
-              ],
-              // for not parsed messages
-              "PassthroughFieldSettings": [
-                // keep the original message as it is
-                {
-                  "Input": {
-                    "Message": true
-                  },
-                  "OutputAttribute": null
-                },
-                // add attributes
-                {
-                  "Input": {
-                    "Attribute": "SenderHostName"
-                  },
-                  "OutputAttribute": "Host"
-                },
-                {
-                  "Input": {
-                    "Attribute": "ReciveTimestamp",
-                    "Type": "DateTime"
-                  },
-                  "OutputAttribute": "EventTimestamp"
+              },
+              {
+                "ModuleExpression": {
+                  "Assembly": null,
+                  "Type": "",
+                  "ConfigurationJSON": null
                 }
-              ]
-            }
+              },
+              {
+                "RegExExpression": {
+                  "FirstValue": {
+                    "Attribute": {
+                      "Name": "HHH",
+                      "Type": "Float"
+                    }
+                  },
+                  "Operator": "Matches",
+                  "RegularExpressions": {
+                    "And": [ "DFSSS" ]
+                  }
+                }
+              }
+            ]
           },
-          //"Output": [ "JSON File Output", "Splunk HEC" ],
-          "Output": [ "Console Debug Output" ],
-          "Attributes": {
-            "sourcetype": "daas"
+          "StopIfMatched": false,
+          "Parser": {
+            "Output": [ "CCC" ]
           }
         }
       }

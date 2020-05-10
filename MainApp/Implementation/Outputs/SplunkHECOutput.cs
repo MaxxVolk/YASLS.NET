@@ -244,7 +244,7 @@ namespace YASLS
       }
     }
 
-    public void Initialize(JObject configuration, CancellationToken cancellationToken)
+    public void LoadConfiguration(JObject configuration, CancellationToken cancellationToken)
     {
       token = cancellationToken;
       outputConfiguration = configuration.ToObject<SplunkHECOutputConfiguration>();
@@ -255,6 +255,11 @@ namespace YASLS
       this.logger = logger;
       this.healthReporter = healthReporter;
       Messages = factory.GetMessageQueue(this);
+    }
+
+    public void Initialize()
+    {
+      
     }
   }
 

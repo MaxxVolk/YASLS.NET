@@ -10,7 +10,7 @@
       "type": "object",
       "description": "Define one or more inputs, which defines how log data flows in.",
       "additionalProperties": {
-        "description": "Define a single input by specifying .NET assembly, managed type, and module configuration. The managed type must support IInputModule interface. Each module runs in a separeate thread.",
+        "description": "Define a single input by specifying .NET assembly, managed type, and module configuration. The managed type must support IInputModule interface. Each module runs in a separate thread.",
         "$ref": "#/%24defs/ModuleDef"
       }
     },
@@ -29,19 +29,20 @@
           },
           "AttributeExtractors": {
             "additionalProperties": {
-              "description": "Collection of property extractor modules. Modules must support IAttributeExtractor interface. Modules run consequentually in the queue offload thread.",
+              "description": "Collection of property extractor modules. Modules must support IAttributeExtractor interface. Modules run consequentially in the queue offload thread.",
               "$ref": "#/%24defs/ModuleDef"
             }
           },
           "Attributes": {
             "$ref": "#/%24defs/AttributesDef"
           }
-        }
+        },
+        "required": [ "Inputs" ]
       }
     },
     "Routing": {
       "type": "object",
-      "description": "A collection of message routes. Each route has a single queue at its input, then it passes a message throught a collection of filters. Each filter has a parser and an output attached to it. Any messages matched my a filter are passed to its parser, and then to associated output.",
+      "description": "A collection of message routes. Each route has a single queue at its input, then it passes a message through a collection of filters. Each filter has a parser and an output attached to it. Any messages matched my a filter are passed to its parser, and then to associated output.",
       "additionalProperties": {
         "type": "object",
         "description": "Named route object.",
@@ -55,70 +56,33 @@
             "description": "A collection of filters in the current route.",
             "additionalProperties": {
               "type": "object",
-              "description": "Filter definition. One of the following filtering properties can be defined: AllMessages, or one of the standard filters (RegExp, AttributeFilter), or a custom filter module Filter. Define 'Parser' to apply a specific message parser. 'Output' must be defined to write events into output queues.",
               "properties": {
-                "AllMessages": {
-                  "type": "boolean",
-                  "description": "All messages match this filter.",
-                  "default": false
-                },
-                "RegExp": {
-                  "type": "object",
-                  "description": "Regular Expression filter. Define at least one property. All defined property are combined with boolean AND.",
-                  "properties": {
-                    "InputAttribute": {
-                      "type": [ "string", "null" ],
-                      "description": "Input argiment for the filter: Actual raw message if null, or an attribut."
-                    },
-                    "Conditions": {
-                      "type": "object",
-                      "properties": {
-                        "And": {
-                          "type": "array",
-                          "description": "All regular expressions in this property must match.",
-                          "items": { "type": "string" }
-                        },
-                        "Or": {
-                          "type": "array",
-                          "description": "At least one regular expressions in this property must match.",
-                          "items": { "type": "string" }
-                        },
-                        "NotAll": {
-                          "type": "array",
-                          "description": "All of regular expressions in this property must not match.",
-                          "items": { "type": "string" }
-                        },
-                        "NotAny": {
-                          "type": "array",
-                          "description": "None of regular expressions in this property must match.",
-                          "items": { "type": "string" }
-                        }
-                      }
-                    }
-                  }
-                },
-                "Filter": {
-                  "description": "Defines and external filter by specifying .NET assembly, managed type, and module configuration. The managed type must support IFilterModule interface.",
-                  "$ref": "#/%24defs/ModuleDef"
+                "Expression": {
+                  "$ref": "#/%24defs/ExpressionDef"
                 },
                 "StopIfMatched": {
                   "type": "boolean",
                   "default": false,
-                  "description": "If true, then don't pass the current message to consequental filters if the message matches this filter conditions."
+                  "description": "If true, then don't pass the current message to consequential filters if the message matches this filter conditions."
                 },
                 "Parser": {
-                  "description": "Defines and external parser by specifying .NET assembly, managed type, and module configuration. The managed type must support IParserModule interface.",
-                  "$ref": "#/%24defs/ModuleDef"
-                },
-                "Output": {
-                  "type": "array",
-                  "items": { "type": "string" },
-                  "description": "Reference to an output."
-                },
-                "Attributes": {
-                  "$ref": "#/%24defs/AttributesDef"
+                  "type": "object",
+                  "properties": {
+                    "ParsingModule": {
+                      "description": "Defines and external parser by specifying .NET assembly, managed type, and module configuration. The managed type must support IParserModule interface.",
+                      "$ref": "#/%24defs/ModuleDef"
+                    },
+                    "Output": {
+                      "type": "array",
+                      "items": { "type": "string" },
+                      "description": "Reference to an output."
+                    }
+                  },
+                  "required": [ "Output" ]
                 }
-              }
+              },
+              "required": [ "Parser", "StopIfMatched" ],
+              "additionalProperties": false
             }
           }
         }
@@ -126,9 +90,9 @@
     },
     "Outputs": {
       "type": "object",
-      "description": "Collection of outputs. Each output runs in a separate queue. Output module must suppot IOutputModule interface.",
+      "description": "Collection of outputs. Each output runs in a separate queue. Output module must support IOutputModule interface.",
       "additionalProperties": {
-        "description": "Define a single output by specifying .NET assembly, managed type, and module configuration. The managed type must support IOutputModule interface. Each module runs in a separeate thread.",
+        "description": "Define a single output by specifying .NET assembly, managed type, and module configuration. The managed type must support IOutputModule interface. Each module runs in a separate thread.",
         "$ref": "#/%24defs/ModuleDef"
       }
     }
@@ -163,8 +127,185 @@
         "Attributes": {
           "$ref": "#/%24defs/AttributesDef"
         }
-      }
+      },
+      "required": [ "Assembly", "Type", "ConfigurationJSON" ],
+      "additionalProperties": false
+    },
+    "ExpressionDef": {
+      "type": "object",
+      "properties": {
+        "And": {
+          "type": "array",
+          "items": { "$ref": "#/%24defs/ExpressionDef" },
+          "minItems": 2
+        },
+        "Or": {
+          "type": "array",
+          "items": { "$ref": "#/%24defs/ExpressionDef" },
+          "minItems": 2
+        },
+        "Not": {
+          "$ref": "#/%24defs/ExpressionDef"
+        },
+        "Exists": {
+          "type": "object",
+          "properties": {
+            "Attribute": {
+              "type": "object",
+              "properties": {
+                "Name": { "type": "string" },
+                "Type": { "$ref": "#/%24defs/TypeDef" }
+              },
+              "required": [ "Name", "Type" ],
+              "additionalProperties": false
+            }
+          }
+        },
+        "SimpleExpression": {
+          "type": "object",
+          "properties": {
+            "FirstValue": { "$ref": "#/%24defs/ValueExpressionDef" },
+            "Operator": {
+              "type": "string",
+              "enum": [ "Equal", "NotEqual", "Greater", "Less", "GreaterEqual", "LessEqual" ]
+            },
+            "SecondValue": { "$ref": "#/%24defs/ValueExpressionDef" }
+          },
+          "required": [ "FirstValue", "Operator", "SecondValue" ],
+          "additionalProperties": false
+        },
+        "InExpression": {
+          "type": "object",
+          "properties": {
+            "FirstValue": { "$ref": "#/%24defs/ValueExpressionDef" },
+            "Operator": {
+              "type": "string",
+              "enum": [ "In", "NotIn", "InclusiveIn", "InclusiveNotIn" ]
+            },
+            "SecondValue": {
+              "type": "object",
+              "properties": {
+                "Range": {
+                  "type": "object",
+                  "properties": {
+                    "StartValue": { "$ref": "#/%24defs/ValueExpressionDef" },
+                    "EndValue": { "$ref": "#/%24defs/ValueExpressionDef" }
+                  },
+                  "required": [ "StartValue", "EndValue" ],
+                  "additionalProperties": false
+                },
+                "List": {
+                  "type": "array",
+                  "items": { "$ref": "#/%24defs/ValueExpressionDef" },
+                  "minItems": 1
+                }
+              },
+              "oneOf": [
+                { "required": [ "Range" ] },
+                { "required": [ "List" ] }
+              ],
+              "additionalProperties": false
+            }
+          },
+          "required": [ "FirstValue", "Operator", "SecondValue" ],
+          "additionalProperties": false
+        },
+        "RegExExpression": {
+          "type": "object",
+          "properties": {
+            "FirstValue": { "$ref": "#/%24defs/ValueExpressionDef" },
+            "Operator": {
+              "type": "string",
+              "enum": [ "Matches", "NotMatches" ]
+            },
+            "RegularExpressions": {
+              "type": "object",
+              "properties": {
+                "And": {
+                  "type": "array",
+                  "description": "All regular expressions in this property must match.",
+                  "items": { "type": "string" }
+                },
+                "Or": {
+                  "type": "array",
+                  "description": "At least one regular expressions in this property must match.",
+                  "items": { "type": "string" }
+                },
+                "NotAll": {
+                  "type": "array",
+                  "description": "All of regular expressions in this property must not match.",
+                  "items": { "type": "string" }
+                },
+                "NotAny": {
+                  "type": "array",
+                  "description": "None of regular expressions in this property must match.",
+                  "items": { "type": "string" }
+                },
+                "Options": {
+                  "type": "integer",
+                  "description": "RegEx matching options. Set to 1 to ignore case, for other details see https://docs.microsoft.com/en-us/dotnet/api/system.text.regularexpressions.regexoptions?view=netframework-4.8."
+                }
+              }
+            }
+          },
+          "required": [ "FirstValue", "Operator", "RegularExpressions" ],
+          "additionalProperties": false
+        },
+        "ModuleExpression": {
+          "$ref": "#/%24defs/ModuleDef"
+        }
+      },
+      "oneOf": [
+        { "required": [ "And" ] },
+        { "required": [ "Or" ] },
+        { "required": [ "Not" ] },
+        { "required": [ "Exists" ] },
+        { "required": [ "SimpleExpression" ] },
+        { "required": [ "RegExExpression" ] },
+        { "required": [ "ModuleExpression" ] },
+        { "required": [ "InExpression" ] }
+      ],
+      "additionalProperties": false
+    },
+    "ValueExpressionDef": {
+      "type": "object",
+      "properties": {
+        "Attribute": {
+          "type": "object",
+          "properties": {
+            "Name": { "type": "string" },
+            "Type": { "$ref": "#/%24defs/TypeDef" }
+          },
+          "required": [ "Name", "Type" ]
+        },
+        "Value": {
+          "properties": {
+            "IntValue": { "type": "integer" },
+            "FloatValue": { "type": "number" },
+            "StringValue": { "type": "string" },
+            "DateTimeValue": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "BooleanValue": { "type": "boolean" }
+          },
+          "oneOf": [
+            { "required": [ "IntValue" ] },
+            { "required": [ "FloatValue" ] },
+            { "required": [ "StringValue" ] },
+            { "required": [ "DateTimeValue" ] },
+            { "required": [ "BooleanValue" ] }
+          ]
+        }
+      },
+      "oneOf": [
+        { "required": [ "Attribute" ] },
+        { "required": [ "Value" ] }
+      ]
+    },
+    "TypeDef": {
+      "type": "string",
+      "enum": [ "Int", "Float", "String", "DateTime", "Boolean" ]
     }
-
   }
 }

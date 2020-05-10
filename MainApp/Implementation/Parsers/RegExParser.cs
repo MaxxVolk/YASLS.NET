@@ -35,7 +35,7 @@ namespace YASLS
     public Version GetModuleVersion() => Assembly.GetAssembly(GetType()).GetName().Version;
     #endregion
 
-    public void Initialize(JObject configuration, CancellationToken cancellationToken)
+    public void LoadConfiguration(JObject configuration, CancellationToken cancellationToken)
     {
       token = cancellationToken;
       config = configuration.ToObject<RegExParserConfiguration>();

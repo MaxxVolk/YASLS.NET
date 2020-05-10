@@ -21,35 +21,35 @@ namespace YASLS.Configuration
 
   public class FilterDefinition
   {
-    [JsonProperty("AllMessages")]
-    public bool AllMessages { get; set; } = false;
+    [JsonProperty("Expression")]
+    public JObject Expression { get; set; } // later parsing to Expression when Filter object is created
 
-    [JsonProperty("StopIfMatched")]
+  [JsonProperty("StopIfMatched")]
     public bool StopIfMatched { get; set; } = false;
 
-    [JsonProperty("Filter")]
-    public ModuleDefinition Filter { get; set; }
-
-    [JsonIgnore]
-    public IFilterModule FilterModule;
-
-    [JsonProperty("RegExp")]
-    public JObject RegExp { get; set; } // to be parsed inside Filter managed module
-
     [JsonProperty("Parser")]
-    public ModuleDefinition Parser { get; set; }
-
-    [JsonIgnore]
-    public IParserModule ParserModule;
+    public ParserDefinition Parser { get; set; }
 
     [JsonProperty("Attributes")]
     public Dictionary<string, string> Attributes { get; set; }
+  }
+
+  public class ParserDefinition
+  {
+    [JsonProperty("ParsingModule")]
+    public ModuleDefinition ParsingModule { get; set; }
+
+    [JsonIgnore]
+    public IParserModule ParserModule;
 
     [JsonProperty("Output")]
     public List<string> Output { get; set; }
 
     [JsonIgnore]
     public List<IOutputModule> OutputModules;
+
+    [JsonProperty("Attributes")]
+    public Dictionary<string, string> Attributes { get; set; }
   }
 
 }

@@ -22,7 +22,7 @@ namespace YASLS.Standard.Modules
 
 
     #region IOutputModule Implementation
-    public void Initialize(JObject configuration, CancellationToken cancellationToken)
+    public void LoadConfiguration(JObject configuration, CancellationToken cancellationToken)
     {
       token = cancellationToken;
     }
@@ -31,12 +31,14 @@ namespace YASLS.Standard.Modules
     {
       Messages.Enqueue(message);
     }
-
-    public void Destroy() { }
     #endregion
 
     #region IThreadModule Implementation
     public ThreadStart GetWorker() => new ThreadStart(WorkerProc);
+
+    public void Initialize() { }
+
+    public void Destroy() { }
     #endregion
 
     private void WorkerProc()

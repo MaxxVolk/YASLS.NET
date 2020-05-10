@@ -35,12 +35,19 @@ The data flow within the server is the following:
 ### Modules in planning / beta ###
 * File Input Module
 * File Output Module
+* Web-hook Output Module
+* VMware event ingress API Input Module
 
 ### Treading Model ###
 
 * Each Input and Output module runs in its own thread.
 * Each Queue runs in its own thread together with any Attribute Extractor Modules attached (i.e. attribute extractors running within the same thread as the main queue process).
-* Each Route runs in its own thread together with optional Filter and Parser Modules.
+* Each Route runs in its own thread together with optional Filter and Parser Modules attached.
+
+### Module Instances ###
+
+Input and Output modules running as single instances. When they referenced in Routes and Queues, then all message enqueue and dequeue operations performed to the same module instance, i.e. Input and Output modules should be capable with concurrency.
+In opposite, Attribute Extractors, Parsers and Filters Modules running within a context of owning Queue or Route, and the server engine creates a separate instance for each Queue or Route. Therefore, Attribute Extractors, Parsers and Filters Modules shall not be thread safe, and can have different configuration for each instance.
 
 ## Configuration ##
 

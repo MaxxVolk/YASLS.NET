@@ -84,7 +84,7 @@ namespace YASLS
       }
     }
 
-    public void Initialize(JObject configuration, Dictionary<string, string> attributes)
+    public void LoadConfiguration(JObject configuration, Dictionary<string, string> attributes)
     {
       if (attributes != null && attributes.Count > 0)
         foreach (KeyValuePair<string, string> origAttr in attributes)
@@ -139,7 +139,7 @@ namespace YASLS
         }
     }
 
-    public void Initialize(JObject configuration, Dictionary<string, string> attributes)
+    public void LoadConfiguration(JObject configuration, Dictionary<string, string> attributes)
     {
       if (attributes != null && attributes.Count > 0)
         foreach (KeyValuePair<string, string> origAttr in attributes)

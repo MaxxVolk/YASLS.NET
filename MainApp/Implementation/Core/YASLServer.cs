@@ -7,9 +7,9 @@ using System.Threading;
 using YASLS.Configuration;
 using YASLS.SDK.Library;
 
-namespace YASLS
+namespace YASLS.Core
 {
-  public class YASLServer : IModule
+  public class YASLServer : IModule, IModuleResolver
   {
     protected readonly Guid moduleId = Guid.Parse("{04DB4B9A-86D0-4A82-9FDA-CACC77FB82E8}");
 
@@ -17,6 +17,8 @@ namespace YASLS
     protected Dictionary<string, Tuple<IInputModule, Thread>> InputModules = new Dictionary<string, Tuple<IInputModule, Thread>>();
     protected Dictionary<string, Tuple<Route, Thread>> Routes = new Dictionary<string, Tuple<Route, Thread>>();
     protected Dictionary<string, Tuple<IOutputModule, Thread>> OutputModules = new Dictionary<string, Tuple<IOutputModule, Thread>>();
+
+    protected Dictionary<string, AssemblyDefinition> Assemblies;
 
     protected CancellationTokenSource TokenSource;
 
@@ -27,6 +29,7 @@ namespace YASLS
     {
       TokenSource = new CancellationTokenSource();
       queueFactory = new InMemoryConcurrentQueueFactory(internalLogger);
+      Assemblies = serverConfiguration.Assemblies;
 
       #region Create Master Queues
       // create queues
@@ -34,12 +37,11 @@ namespace YASLS
         foreach (KeyValuePair<string, QueueDefinition> queueCfg in serverConfiguration.Queues)
           try
           {
-            QueueDefinition queueDef = queueCfg.Value;
-            MasterQueue newQueue = new MasterQueue(TokenSource.Token, queueDef.Attributes, internalLogger, null, queueFactory);
+            MasterQueue newQueue = new MasterQueue(queueCfg.Value, TokenSource.Token, internalLogger, null, queueFactory, this);
             MasterQueues.Add(queueCfg.Key, new Tuple<MasterQueue, Thread>(newQueue, new Thread(newQueue.GetWorker())));
 
             // reference check for future binding
-            IEnumerable<string> missingInputReferences = queueDef.Inputs.Where(i => serverConfiguration.Inputs?.ContainsKey(i) == false);
+            IEnumerable<string> missingInputReferences = queueCfg.Value.Inputs.Where(i => serverConfiguration.Inputs?.ContainsKey(i) == false);
             if (missingInputReferences.Any())
             {
               string missingList = "";
@@ -47,21 +49,6 @@ namespace YASLS
               missingList = missingList.Substring(0, missingList.Length - 2);
               internalLogger?.LogEvent(this, Severity.Warning, "ServerInit", $"Queue '{queueCfg.Key}' has references to not existing Inputs: {missingList}");
             }
-
-            // add Attribute Extractors to the queue
-            if (queueCfg.Value.AttributeExtractors != null)
-              foreach (KeyValuePair<string, ModuleDefinition> extractorCfg in queueCfg.Value.AttributeExtractors)
-                try
-                {
-                  ModuleDefinition extractorDef = extractorCfg.Value;
-                  IAttributeExtractorModule newExtractorModule = CreateModule<IAttributeExtractorModule>(extractorDef, serverConfiguration.Assemblies);
-                  newExtractorModule.Initialize(extractorDef.ConfigurationJSON, extractorDef.Attributes);
-                  newQueue.RegisterAttributeExtractor(newExtractorModule);
-                }
-                catch (Exception e)
-                {
-                  internalLogger?.LogEvent(this, Severity.Warning, "AttributeExtractorInit", $"Failed to load or initialize '{extractorCfg.Key ?? "<Unknown>"}' attribute parser module.", e);
-                }
           }
           catch (Exception e)
           {
@@ -81,8 +68,8 @@ namespace YASLS
           try
           {
             ModuleDefinition outputDef = outputCfg.Value;
-            IOutputModule newOutputModule = CreateModule<IOutputModule>(outputDef, serverConfiguration.Assemblies);
-            newOutputModule.Initialize(outputDef.ConfigurationJSON, TokenSource.Token);
+            IOutputModule newOutputModule = CreateModuleInternal<IOutputModule>(outputDef, serverConfiguration.Assemblies);
+            newOutputModule.LoadConfiguration(outputDef.ConfigurationJSON, TokenSource.Token);
             OutputModules.Add(outputCfg.Key, new Tuple<IOutputModule, Thread>(newOutputModule, new Thread(new ModuleThreadWrapper(newOutputModule, TokenSource.Token).GetThreadEntry())));
           }
           catch (Exception e)
@@ -96,53 +83,32 @@ namespace YASLS
       }
       #endregion
 
+      #region Create Inputs
+      // create inputs
+      if (serverConfiguration.Inputs != null)
+        foreach (KeyValuePair<string, ModuleDefinition> inputCfg in serverConfiguration.Inputs)
+          try
+          {
+            ModuleDefinition inputDef = inputCfg.Value;
+            IInputModule newInputModule = CreateModuleInternal<IInputModule>(inputDef, serverConfiguration.Assemblies);
+            newInputModule.LoadConfiguration(inputDef.ConfigurationJSON, TokenSource.Token, inputCfg.Value.Attributes, MasterQueues.Where(z => serverConfiguration.Queues.Where(x => x.Value.Inputs.Contains(inputCfg.Key)).Select(y => y.Key).Contains(z.Key)).Select(t => t.Value.Item1));
+            InputModules.Add(inputCfg.Key, new Tuple<IInputModule, Thread>(newInputModule, new Thread(new ModuleThreadWrapper(newInputModule, TokenSource.Token).GetThreadEntry())));
+          }
+          catch (Exception e)
+          {
+            internalLogger?.LogEvent(this, Severity.Warning, "InputInit", $"Failed to load or initialize {inputCfg.Key ?? "<Unknown>"} Input module.", e);
+          }
+      if (InputModules.Count == 0)
+        internalLogger?.LogEvent(this, Severity.Warning, "ServerInit", "WARNING: Failed to create all Inputs or no routes defined. Server starts but will do nothing.");
+      #endregion
+
       #region Create Routes
       // create routes
       if (serverConfiguration.Routing != null)
         foreach (KeyValuePair<string, RouteDefinition> routeCfg in serverConfiguration.Routing)
           try
           {
-            RouteDefinition routeDef = routeCfg.Value;
-            if (routeDef.Filters != null)
-              // parse all filters: Filter and Parsers -- create a new instance for each module definition, Output -- link to existent.
-              foreach (KeyValuePair<string, FilterDefinition> filterCfg in routeDef.Filters)
-                try
-                {
-                  FilterDefinition filterDef = filterCfg.Value;
-                  if (filterDef.Parser != null)
-                  {
-                    ModuleDefinition parserDef = filterDef.Parser;
-                    IParserModule newParserModule = CreateModule<IParserModule>(parserDef, serverConfiguration.Assemblies);
-                    newParserModule.Initialize(parserDef.ConfigurationJSON, TokenSource.Token);
-                    filterDef.ParserModule = newParserModule;
-                  }
-                  if (filterDef.Filter != null)
-                  {
-                    ModuleDefinition filterModuleDef = filterDef.Filter;
-                    IFilterModule filterModule = CreateModule<IFilterModule>(filterModuleDef, serverConfiguration.Assemblies);
-                    filterModule.Initialize(filterModuleDef.ConfigurationJSON, TokenSource.Token);
-                    filterDef.FilterModule = filterModule;
-                  }
-                  filterDef.OutputModules = new List<IOutputModule>();
-                  if (filterDef.Output != null && filterDef.Output.Count > 0)
-                  {
-                    foreach (string outputRef in filterDef.Output)
-                    {
-                      if (OutputModules.ContainsKey(outputRef))
-                        filterDef.OutputModules.Add(OutputModules[outputRef].Item1);
-                      else
-                        internalLogger?.LogEvent(this, Severity.Warning, "ServerInit", $"Warning: Output reference {outputRef} in the filter {filterCfg.Key} definition cannot be resolved.");
-                    }
-                  }
-                  if (filterDef.OutputModules.Count == 0)
-                    internalLogger?.LogEvent(this, Severity.Warning, "ServerInit", $"Warning: Filter {filterCfg.Key} has no Output defined or no Output resolved correctly.");
-                }
-                catch (Exception e)
-                {
-                  internalLogger?.LogEvent(this, Severity.Error, "FilterInit", $"Failed to create '{filterCfg.Key}' filter.", e);
-                }
-            // create a route object -- it's configuration is already parsed and contains module references.
-            Route newRoute = new Route(routeCfg.Value, TokenSource.Token, internalLogger, null, queueFactory);
+            Route newRoute = new Route(routeCfg.Value, TokenSource.Token, internalLogger, null, queueFactory, this);
             Routes.Add(routeCfg.Key, new Tuple<Route, Thread>(newRoute, new Thread(newRoute.GetWorker())));
 
             // attach route to its queue
@@ -159,27 +125,10 @@ namespace YASLS
       }
       #endregion
 
-      #region Create Inputs
-      // create inputs
-      if (serverConfiguration.Inputs != null)
-        foreach (KeyValuePair<string, ModuleDefinition> inputCfg in serverConfiguration.Inputs)
-          try
-          {
-            ModuleDefinition inputDef = inputCfg.Value;
-            IInputModule newInputModule = CreateModule<IInputModule>(inputDef, serverConfiguration.Assemblies);
-            newInputModule.Initialize(inputDef.ConfigurationJSON, TokenSource.Token, inputCfg.Value.Attributes, MasterQueues.Where(z => serverConfiguration.Queues.Where(x => x.Value.Inputs.Contains(inputCfg.Key)).Select(y => y.Key).Contains(z.Key)).Select(t => t.Value.Item1));
-            InputModules.Add(inputCfg.Key, new Tuple<IInputModule, Thread>(newInputModule, new Thread(new ModuleThreadWrapper(newInputModule, TokenSource.Token).GetThreadEntry())));
-          }
-          catch (Exception e)
-          {
-            internalLogger?.LogEvent(this, Severity.Warning, "InputInit", $"Failed to load or initialize {inputCfg.Key ?? "<Unknown>"} Input module.", e);
-          }
-      if (InputModules.Count == 0)
-        internalLogger?.LogEvent(this, Severity.Warning, "ServerInit", "WARNING: Failed to create all Inputs or no routes defined. Server starts but will do nothing.");
-      #endregion
+     
     }
 
-    protected I CreateModule<I>(ModuleDefinition moduleDefinition, Dictionary<string, AssemblyDefinition> assemblies) where I: IModule
+    protected I CreateModuleInternal<I>(ModuleDefinition moduleDefinition, Dictionary<string, AssemblyDefinition> assemblies) where I: IModule
     {
       Assembly moduleAssembly = GetModuleAssembly(moduleDefinition, assemblies);
       Type moduleType = AssertationHelper.AssertNotNull(moduleAssembly.GetType(moduleDefinition.ManagedTypeName), () => new Exception($"Type {moduleDefinition.ManagedTypeName ?? "<Unknown>"} not found."));
@@ -191,11 +140,21 @@ namespace YASLS
       return newModuleInstance;
     }
 
+    protected IT GetModuleReferenceInternal<IT>(string moduleName) where IT: IThreadModule
+    {
+      if (typeof(IT) == typeof(IInputModule) && InputModules.ContainsKey(moduleName))
+        return (IT)InputModules[moduleName].Item1;
+      if (typeof(IT) == typeof(IOutputModule) && OutputModules.ContainsKey(moduleName))
+        return (IT)OutputModules[moduleName].Item1;
+      return default;
+    }
+
     public void Start()
     {
       // start inputs
       foreach (Tuple<IInputModule, Thread> inputModule in InputModules.Values)
       {
+        inputModule.Item1.Initialize();
         inputModule.Item2.Start();
       }
 
@@ -214,6 +173,7 @@ namespace YASLS
       // start outputs
       foreach (Tuple<IOutputModule, Thread> outputModule in OutputModules.Values)
       {
+        outputModule.Item1.Initialize();
         outputModule.Item2.Start();
       }
     }
@@ -279,7 +239,17 @@ namespace YASLS
     public Guid GetModuleId() => moduleId;
 
     public Version GetModuleVersion() => Assembly.GetAssembly(GetType()).GetName().Version;
+
+    public I CreateModule<I>(ModuleDefinition moduleDefinition) where I : IModule => CreateModuleInternal<I>(moduleDefinition, Assemblies);
+
+    public IT GetModuleReference<IT>(string moduleName) where IT : IThreadModule => GetModuleReferenceInternal<IT>(moduleName);
     #endregion
+  }
+
+  public interface IModuleResolver
+  {
+    I CreateModule<I>(ModuleDefinition moduleDefinition) where I : IModule;
+    IT GetModuleReference<IT>(string moduleName) where IT: IThreadModule;
   }
 
   public class ModuleThreadWrapper

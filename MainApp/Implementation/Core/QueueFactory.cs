@@ -6,7 +6,7 @@ using System.Text;
 using System.Threading.Tasks;
 using YASLS.SDK.Library;
 
-namespace YASLS
+namespace YASLS.Core
 {
   class InMemoryConcurrentQueueFactory : IQueueFactory
   {

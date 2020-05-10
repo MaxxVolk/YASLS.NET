@@ -1,4 +1,5 @@
-﻿using Newtonsoft.Json.Linq;
+﻿using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
 using System.Net;
@@ -12,6 +13,8 @@ using YASLS.SDK.Library;
 namespace YASLS
 {
   public enum SyslogTransportProtocol { UDP, TCP, TLS }
+
+  public enum SyslogReciveTimestampFormat { UTC, Local }
 
   public class SyslogInput : IInputModule, IServerBind
   {
@@ -35,11 +38,6 @@ namespace YASLS
     {
       try
       {
-        IPEndPoint lestenerEndpoint = new IPEndPoint(IPAddress.Any, port);
-        socket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
-        socket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReceiveBuffer, bufferSize);
-        socket.Bind(lestenerEndpoint);
-
         EndPoint remoteEndPoint = new IPEndPoint(IPAddress.Any, 0);
         byte[] buffer = new byte[bufferSize];
         while (true)
@@ -74,14 +72,7 @@ namespace YASLS
     {
       try
       {
-        IPEndPoint lestenerEndpoint = new IPEndPoint(IPAddress.Any, port);
-        socket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
-        socket.Bind(lestenerEndpoint);
-        socket.Listen(int.MaxValue);
-
         EndPoint remoteEndPoint = new IPEndPoint(IPAddress.Any, 0);
-        
-        
         while (true)
         {
           Task<Socket> tcpAsyncAcceptResult = socket.AcceptAsync();
@@ -167,7 +158,8 @@ namespace YASLS
       return message;
     }
 
-    public void Initialize(JObject configuration, CancellationToken cancellationToken, Dictionary<string, string> attributes, IEnumerable<IServerMasterQueue> queue)
+    #region IInputModule
+    public void LoadConfiguration(JObject configuration, CancellationToken cancellationToken, Dictionary<string, string> attributes, IEnumerable<IServerMasterQueue> queue)
     {
       port = configuration["Port"].Value<int>();
       string strProtocol = configuration["Protocol"]?.Value<string>();
@@ -179,11 +171,13 @@ namespace YASLS
           Attributes.Add(origAttr.Key, origAttr.Value);
       AddSenderIPAttribute = configuration["AddSenderIPAttribute"]?.Value<bool>() ?? true;
       AddReciveTimestampAttribute = configuration["AddReciveTimestampAttribute"]?.Value<bool>() ?? true;
-      ReciveTimestampAttributeLocal = (configuration["ReciveTimestampAttributeFormat"]?.Value<string>() == "Local");
+      ReciveTimestampAttributeLocal = configuration["ReciveTimestampAttributeFormat"]?.Value<string>() == "Local";
       token = cancellationToken;
       OutputQueues.AddRange(queue);
     }
+    #endregion
 
+    #region IThreadModule
     public ThreadStart GetWorker()
     {
       switch (protocol)
@@ -196,10 +190,32 @@ namespace YASLS
       throw new NotImplementedException("Protocol is not implemented.");
     }
 
+    public void Initialize()
+    {
+      switch (protocol)
+      {
+        case SyslogTransportProtocol.UDP:
+          IPEndPoint udpLestenerEndpoint = new IPEndPoint(IPAddress.Any, port);
+          socket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
+          socket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReceiveBuffer, bufferSize);
+          socket.Bind(udpLestenerEndpoint);
+          break;
+        case SyslogTransportProtocol.TCP:
+          IPEndPoint tcpLestenerEndpoint = new IPEndPoint(IPAddress.Any, port);
+          socket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
+          socket.Bind(tcpLestenerEndpoint);
+          socket.Listen(int.MaxValue);
+          break;
+        default:
+          throw new NotImplementedException("Protocol is not implemented.");
+      }
+    }
+
     public void Destroy()
     {
       socket?.Close();
     }
+    #endregion
 
     #region IModule Implementation
     public string GetModuleName() => GetType().FullName;
@@ -228,5 +244,30 @@ namespace YASLS
     internal byte[] buffer = new byte[BufferSize];
     internal StringBuilder stringBuilder = new StringBuilder();
     internal EndPoint remoteEndPoint = new IPEndPoint(IPAddress.Any, 0);
+  }
+
+  public class SyslogInputConfiguration
+  {
+    [JsonProperty("Port")]
+    public int Port { get; set; }
+
+    [JsonProperty("Protocol")]
+    protected string ProtocolStr { get; set; }
+
+    [JsonIgnore]
+    private SyslogTransportProtocol _Protocol;
+    [JsonIgnore]
+    private bool ProtocolParsed = false;
+    [JsonIgnore]
+    public SyslogTransportProtocol Protocol
+    {
+      get
+      {
+        if (ProtocolParsed) return _Protocol;
+        _Protocol = (SyslogTransportProtocol)Enum.Parse(typeof(SyslogTransportProtocol), ProtocolStr);
+        ProtocolParsed = true;
+        return _Protocol;
+      }
+    }
   }
 }

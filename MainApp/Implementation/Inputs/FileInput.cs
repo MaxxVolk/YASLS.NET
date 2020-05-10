@@ -17,7 +17,7 @@ namespace YASLS
     protected ILogger logger = null;
     protected IHealthReporter healthReporter = null;
 
-    public void Initialize(JObject configuration, CancellationToken cancellationToken, Dictionary<string, string> attributes, IEnumerable<IServerMasterQueue> queue)
+    public void LoadConfiguration(JObject configuration, CancellationToken cancellationToken, Dictionary<string, string> attributes, IEnumerable<IServerMasterQueue> queue)
     {
 
       if (attributes != null && attributes.Count > 0)
@@ -75,6 +75,11 @@ namespace YASLS
     {
       this.logger = logger;
       this.healthReporter = healthReporter;
+    }
+
+    public void Initialize()
+    {
+     
     }
   }
 }

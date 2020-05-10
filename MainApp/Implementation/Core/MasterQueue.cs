@@ -3,9 +3,10 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Reflection;
 using System.Threading;
+using YASLS.Configuration;
 using YASLS.SDK.Library;
 
-namespace YASLS
+namespace YASLS.Core
 {
   public class MasterQueue : IServerMasterQueue, IModule
   {
@@ -18,15 +19,30 @@ namespace YASLS
     protected ILogger eventLogger;
     protected IHealthReporter healthReporter;
 
-    public MasterQueue(CancellationToken cancellationToken, Dictionary<string, string> attributes, ILogger logger, IHealthReporter healthReporter, IQueueFactory queueFactory)
+    public MasterQueue(QueueDefinition cfg, CancellationToken cancellationToken, ILogger logger, IHealthReporter healthReporter, IQueueFactory queueFactory, IModuleResolver moduleResolver)
     {
       token = cancellationToken;
       eventLogger = logger;
       this.healthReporter = healthReporter;
-      if (attributes != null && attributes.Count > 0)
-        foreach (KeyValuePair<string, string> origAttr in attributes)
+      if (cfg.Attributes != null && cfg.Attributes.Count > 0)
+        foreach (KeyValuePair<string, string> origAttr in cfg.Attributes)
           Attributes.Add(origAttr.Key, origAttr.Value);
       Messages = queueFactory.GetMessageQueue(this);
+
+      // add Attribute Extractors to the queue
+      if (cfg.AttributeExtractors != null)
+        foreach (KeyValuePair<string, ModuleDefinition> extractorCfg in cfg.AttributeExtractors)
+          try
+          {
+            ModuleDefinition extractorDef = extractorCfg.Value;
+            IAttributeExtractorModule newExtractorModule = moduleResolver.CreateModule<IAttributeExtractorModule>(extractorDef);
+            newExtractorModule.LoadConfiguration(extractorDef.ConfigurationJSON, extractorDef.Attributes);
+            Extractors.Add(newExtractorModule);
+          }
+          catch (Exception e)
+          {
+            eventLogger?.LogEvent(this, Severity.Warning, "AttributeExtractorInit", $"Failed to load or initialize '{extractorCfg.Key ?? "<Unknown>"}' attribute parser module.", e);
+          }
     }
 
     public void Enqueue(MessageDataItem message)
@@ -68,11 +84,6 @@ namespace YASLS
     }
 
     public ThreadStart GetWorker() => new ThreadStart(WorkerProc);
-
-    public void RegisterAttributeExtractor(IAttributeExtractorModule attributeExtractor)
-    {
-      Extractors.Add(attributeExtractor);
-    }
 
     public void RegisterRoute(Route route)
     {

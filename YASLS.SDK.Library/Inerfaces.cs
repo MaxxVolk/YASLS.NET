@@ -49,6 +49,14 @@ namespace YASLS.SDK.Library
     /// </summary>
     /// <returns>Module thread entry point</returns>
     ThreadStart GetWorker();
+    /// <summary>
+    /// Implementation if this method should allocate all used resources. This method can be executed multiple time if the module needs restart.
+    /// </summary>
+    void Initialize();
+    /// <summary>
+    /// Implementation if this method should free up all used resources. This method can be executed multiple time if the module needs restart.
+    /// </summary>
+    void Destroy();
   }
 
   /// <summary>
@@ -64,11 +72,7 @@ namespace YASLS.SDK.Library
     /// <param name="cancellationToken">Cancellation token used by server to signal module thread to finish work.</param>
     /// <param name="attributes">Attributes associated with the module. Normally, module implementation shall add them to outgoing message.</param>
     /// <param name="queue">List of queues, where module shall send messages to.</param>
-    void Initialize(JObject configuration, CancellationToken cancellationToken, Dictionary<string, string> attributes, IEnumerable<IServerMasterQueue> queue);
-    /// <summary>
-    /// Implementation if this method should free up all used resources.
-    /// </summary>
-    void Destroy();
+    void LoadConfiguration(JObject configuration, CancellationToken cancellationToken, Dictionary<string, string> attributes, IEnumerable<IServerMasterQueue> queue);
   }
 
   /// <summary>
@@ -82,16 +86,12 @@ namespace YASLS.SDK.Library
     /// </summary>
     /// <param name="configuration">Content of 'ConfigurationJSON' object in JSON module definition.</param>
     /// <param name="cancellationToken">Cancellation token used by server to signal module thread to finish work.</param>
-    void Initialize(JObject configuration, CancellationToken cancellationToken);
+    void LoadConfiguration(JObject configuration, CancellationToken cancellationToken);
     /// <summary>
     /// This method accepts inbound messages/events.
     /// </summary>
     /// <param name="message">Inbound message/event.</param>
     void Enqueue(MessageDataItem message);
-    /// <summary>
-    /// Implementation if this method should free up all used resources.
-    /// </summary>
-    void Destroy();
   }
 
   /// <summary>
@@ -105,7 +105,7 @@ namespace YASLS.SDK.Library
     /// </summary>
     /// <param name="configuration">Content of 'ConfigurationJSON' object in JSON module definition.</param>
     /// <param name="cancellationToken">Cancellation token used by server to signal module thread to finish work.</param>
-    void Initialize(JObject configuration, CancellationToken cancellationToken);
+    void LoadConfiguration(JObject configuration, CancellationToken cancellationToken);
     /// <summary>
     /// 
     /// </summary>
@@ -125,7 +125,7 @@ namespace YASLS.SDK.Library
     /// </summary>
     /// <param name="configuration">Content of 'ConfigurationJSON' object in JSON module definition.</param>
     /// <param name="cancellationToken">Cancellation token used by server to signal module thread to finish work.</param>
-    void Initialize(JObject configuration, CancellationToken cancellationToken);
+    void LoadConfiguration(JObject configuration, CancellationToken cancellationToken);
     /// <summary>
     /// Returns true if an inbound message matches current route branch conditions.
     /// </summary>
@@ -146,7 +146,7 @@ namespace YASLS.SDK.Library
     /// </summary>
     /// <param name="configuration">Content of 'ConfigurationJSON' object in JSON module definition.</param>
     /// <param name="attributes"></param>
-    void Initialize(JObject configuration, Dictionary<string, string> attributes);
+    void LoadConfiguration(JObject configuration, Dictionary<string, string> attributes);
     /// <summary>
     /// Analyses an inbound message and extract standard information into message attributes.
     /// </summary>
@@ -232,13 +232,21 @@ namespace YASLS.SDK.Library
   public interface IHealthReporter
   {
     /// <summary>
-    /// Set module component health state to report module health to the core server and/or external monitoring system.
+    /// Set module component health state to report module health to the core server and/or an external monitoring system.
     /// </summary>
     /// <param name="sourceModule">Self module reference.</param>
     /// <param name="component">Module component or workflow part identifier.</param>
     /// <param name="healthState">Component health state.</param>
     /// <param name="message">Optional message to associate with the health state.</param>
     void SetModuleHealth(IModule sourceModule, string component, HealthState healthState, string message = null);
+    /// <summary>
+    /// Set module component counter value to report module performance to the core server and/or an external monitoring system.
+    /// </summary>
+    /// <param name="sourceModule">Self module reference.</param>
+    /// <param name="component">Module component or workflow part identifier.</param>
+    /// <param name="counter">Counter name.</param>
+    /// <param name="value">Counter value.</param>
+    void SetPerformanceCounter(IModule sourceModule, string component, string counter, double value);
   }
 
   /// <summary>

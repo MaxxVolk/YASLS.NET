@@ -13,6 +13,8 @@ using YASLS.SDK.Library;
 
 namespace YASLS
 {
+  public enum OutputModule { JSON, CSV, TSV, XML }
+
   class FileOutput : IOutputModule, IServerBind
   {
     protected readonly Guid moduleId = Guid.Parse("{A8AB8740-7D5A-4628-98A5-5221F7D04C06}");
@@ -54,38 +56,38 @@ namespace YASLS
           break;
         if (Messages.TryDequeue(out MessageDataItem newMessage))
         {
-          switch (outputConfiguration.Mode)
-          {
-            case "DataItemAsJSON":
-              JObject outData = new JObject
-              {
-                { "Message", newMessage.Message }
-              };
-              foreach (string attrName in newMessage.GetAttributeNames)
-              {
-                Variant attrValue = newMessage.GetAttributeAsVariant(attrName);
-                switch (attrValue.Type)
-                {
-                  case VariantType.Boolean:
-                    outData.Add(attrName, attrValue.BooleanValue);
-                    break;
-                  case VariantType.DateTime:
-                    outData.Add(attrName, attrValue.DateTimeValue);
-                    break;
-                  case VariantType.Float:
-                    outData.Add(attrName, attrValue.FloatValue);
-                    break;
-                  case VariantType.Int:
-                    outData.Add(attrName, attrValue.IntValue);
-                    break;
-                  case VariantType.String:
-                    outData.Add(attrName, attrValue.StringValue);
-                    break;
-                }
-              }
-              File.AppendAllText(fullPath, outData.ToString(Formatting.None) + "\r\n");
-              break;
-          }
+          //switch (outputConfiguration.Mode)
+          //{
+          //  case "JSON":
+          //    JObject outData = new JObject
+          //    {
+          //      { "Message", newMessage.Message }
+          //    };
+          //    foreach (string attrName in newMessage.GetAttributeNames)
+          //    {
+          //      Variant attrValue = newMessage.GetAttributeAsVariant(attrName);
+          //      switch (attrValue.Type)
+          //      {
+          //        case VariantType.Boolean:
+          //          outData.Add(attrName, attrValue.BooleanValue);
+          //          break;
+          //        case VariantType.DateTime:
+          //          outData.Add(attrName, attrValue.DateTimeValue);
+          //          break;
+          //        case VariantType.Float:
+          //          outData.Add(attrName, attrValue.FloatValue);
+          //          break;
+          //        case VariantType.Int:
+          //          outData.Add(attrName, attrValue.IntValue);
+          //          break;
+          //        case VariantType.String:
+          //          outData.Add(attrName, attrValue.StringValue);
+          //          break;
+          //      }
+          //    }
+          //    File.AppendAllText(fullPath, outData.ToString(Formatting.None) + "\r\n");
+          //    break;
+          //}
 
           
           continue; // sleep only if the queue is empty
@@ -97,7 +99,7 @@ namespace YASLS
       }
     }
 
-    public void Initialize(JObject configuration, CancellationToken cancellationToken)
+    public void LoadConfiguration(JObject configuration, CancellationToken cancellationToken)
     {
       token = cancellationToken;
       outputConfiguration = configuration.ToObject<FileOutputConfiguration>();
@@ -110,13 +112,18 @@ namespace YASLS
       this.healthReporter = healthReporter;
       Messages = factory.GetMessageQueue(this);
     }
+
+    public void Initialize()
+    {
+      
+    }
     #endregion
   }
 
   public class FileOutputConfiguration
   {
-    [JsonProperty]
-    public string Mode { get; set; }
+    [JsonProperty("Mode")]
+    protected string ModeString { get; set; }
 
     [JsonProperty]
     public string Path { get; set; }

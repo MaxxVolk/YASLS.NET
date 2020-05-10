@@ -2,6 +2,7 @@
 using System;
 using System.IO;
 using YASLS.Configuration;
+using YASLS.Core;
 
 namespace YASLS
 {
