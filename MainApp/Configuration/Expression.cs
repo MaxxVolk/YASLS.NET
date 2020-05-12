@@ -21,7 +21,7 @@ namespace YASLS.Configuration
     [JsonProperty]
     public Expression Not { get; set; }
     [JsonProperty]
-    public AttributeExpression Exists { get; set; }
+    public ExistsExpression Exists { get; set; }
     [JsonProperty]
     public SimpleExpression SimpleExpression { get; set; }
     [JsonProperty]
@@ -54,13 +54,16 @@ namespace YASLS.Configuration
       if (And != null)
         return And.All(x => x?.Evaluate(dataItem) == true);
       if (Or != null)
-        return And.Any(x => x?.Evaluate(dataItem) == true);
+        return Or.Any(x => x?.Evaluate(dataItem) == true);
       if (Not != null)
         return !Not.Evaluate(dataItem);
       if (Exists != null)
-        if (dataItem.AttributeExists(Exists.Name ?? ""))
-          if (dataItem.GetAttributeAsVariant(Exists.Name).Type == Exists.Type)
-            return true;
+      {
+        if (Exists.Attribute != null)
+          if (dataItem.AttributeExists(Exists.Attribute.Name ?? ""))
+            if (dataItem.GetAttributeAsVariant(Exists.Attribute.Name).Type == Exists.Attribute.Type)
+              return true;
+      }
       if (SimpleExpression != null)
         return SimpleExpression.Evaluate(dataItem);
       if (InExpression != null)
@@ -212,19 +215,25 @@ namespace YASLS.Configuration
         {
           case InExpressionOperator.In:
           case InExpressionOperator.InclusiveIn:
-            return SecondValue.List.Any(x => x?.Value == firstValue);
+            return SecondValue.List.Any(x => x?.GetValue(dataItem) == firstValue);
           case InExpressionOperator.NotIn:
           case InExpressionOperator.InclusiveNotIn:
-            return SecondValue.List.All(x => x?.Value != firstValue);
+            return SecondValue.List.All(x => x?.GetValue(dataItem) != firstValue);
         }
       return false;
     }
   }
 
+  public class ExistsExpression
+  {
+    [JsonProperty("Attribute")]
+    public AttributeExpression Attribute { get; set; }
+  }
+
   public class InValueExpression
   {
     [JsonProperty]
-    public List<ValueValueExpression> List { get; set; }
+    public List<ValueExpression> List { get; set; }
 
     [JsonProperty]
     public InRangeValueExpression Range { get; set; }

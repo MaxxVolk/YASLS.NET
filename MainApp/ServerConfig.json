@@ -443,7 +443,7 @@
                 ]
               }
             },
-            "Output": [ "Console Debug Output" ]
+            "Output": [ ]
           }
         }
       }
@@ -458,12 +458,24 @@
                 "SimpleExpression": {
                   "FirstValue": {
                     "Attribute": {
-                      "Name": "XXX",
+                      "Name": "NetworkSource",
+                      "Type": "String"
+                    }
+                  },
+                  "Operator": "Equal",
+                  "SecondValue": { "Value": { "StringValue": "UDP Syslog" } }
+                }
+              },
+              {
+                "SimpleExpression": {
+                  "FirstValue": {
+                    "Attribute": {
+                      "Name": "ReciveTimestamp",
                       "Type": "DateTime"
                     }
                   },
                   "Operator": "GreaterEqual",
-                  "SecondValue": { "Value": { "DateTimeValue": "2222-04-04T11:11:11.0+12:00" } } // local NZ time
+                  "SecondValue": { "Value": { "DateTimeValue": "2020-05-11T00:00:00.0Z" } }
                 }
               },
               {
@@ -471,24 +483,16 @@
                   {
                     "SimpleExpression": {
                       "FirstValue": {
-                        "Attribute": {
-                          "Name": "TTT",
-                          "Type": "Boolean"
-                        }
+                        "Value": {"FloatValue": 5.6}
                       },
-                      "Operator": "Equal",
-                      "SecondValue": { "Value": { "BooleanValue": false } }
+                      "Operator": "GreaterEqual",
+                      "SecondValue": { "Value": { "FloatValue": 5 } }
                     }
                   },
                   {
                     "Not": {
                       "SimpleExpression": {
-                        "FirstValue": {
-                          "Attribute": {
-                            "Name": "HHH",
-                            "Type": "Int"
-                          }
-                        },
+                        "FirstValue": { "Value": { "IntValue": 2 } },
                         "Operator": "GreaterEqual",
                         "SecondValue": { "Value": { "IntValue": 5 } }
                       }
@@ -499,18 +503,15 @@
               {
                 "Exists": {
                   "Attribute": {
-                    "Name": "EEEE",
-                    "Type": "Float"
+                    "Name": "SenderIP",
+                    "Type": "String"
                   }
                 }
               },
               {
                 "InExpression": {
                   "FirstValue": {
-                    "Attribute": {
-                      "Name": "HHH",
-                      "Type": "Float"
-                    }
+                    "Value": { "IntValue": 4 }
                   },
                   "Operator": "In",
                   "SecondValue": {
@@ -522,23 +523,16 @@
                 }
               },
               {
-                "ModuleExpression": {
-                  "Assembly": null,
-                  "Type": "",
-                  "ConfigurationJSON": null
-                }
-              },
-              {
                 "RegExExpression": {
                   "FirstValue": {
                     "Attribute": {
-                      "Name": "HHH",
-                      "Type": "Float"
+                      "Name": "SenderHostName",
+                      "Type": "String"
                     }
                   },
                   "Operator": "Matches",
                   "RegularExpressions": {
-                    "And": [ "DFSSS" ]
+                    "And": [ "localhost" ]
                   }
                 }
               }
@@ -546,7 +540,7 @@
           },
           "StopIfMatched": false,
           "Parser": {
-            "Output": [ "CCC" ]
+            "Output": [ "Console Debug Output" ]
           }
         }
       }
