@@ -48,7 +48,7 @@ namespace YASLS.Core
 
     public void Enqueue(MessageDataItem message)
     {
-      if (Implementation.Count > 10000)
+      if (Implementation.Count > 60000)
         internalLogger?.LogEvent(ownerModule, Severity.Error, "QueueOverflow", "Module queue is full. Dropping events.");
       else
       Implementation.Enqueue(message);

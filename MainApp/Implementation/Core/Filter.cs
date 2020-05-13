@@ -14,15 +14,34 @@ namespace YASLS.Core
     protected Expression FilterExpression = null;
     protected Parser Parser;
     protected bool stopIfMatched = false;
-    // modules
 
+    // modules
+    protected List<IAttributeExtractorModule> Extractors = new List<IAttributeExtractorModule>();
 
     public Filter(FilterDefinition cfg, ILogger logger, IHealthReporter healthReporter, CancellationToken cancellationToken, IModuleResolver moduleResolver) : base(logger, healthReporter)
     {
       FilterExpression = cfg.Expression?.ToObject<Expression>();
       FilterExpression?.ResolveModules(moduleResolver, cancellationToken);
       stopIfMatched = cfg.StopIfMatched;
+
+      // add Parser
       Parser = new Parser(cfg.Parser, logger, healthReporter, cancellationToken, moduleResolver);
+
+      // add Attribute Extractors to the parser
+      if (cfg.AttributeExtractors != null)
+        foreach (KeyValuePair<string, ModuleDefinition> extractorCfg in cfg.AttributeExtractors)
+          try
+          {
+            ModuleDefinition extractorDef = extractorCfg.Value;
+            IAttributeExtractorModule newExtractorModule = moduleResolver.CreateModule<IAttributeExtractorModule>(extractorDef);
+            newExtractorModule.LoadConfiguration(extractorDef.ConfigurationJSON, extractorDef.Attributes);
+            Extractors.Add(newExtractorModule);
+          }
+          catch (Exception e)
+          {
+            Logger?.LogEvent(this, Severity.Warning, "AttributeExtractorInit", $"Failed to load or initialize '{extractorCfg.Key ?? "<Unknown>"}' attribute parser module.", e);
+          }
+
       if (cfg.Attributes != null && cfg.Attributes.Count > 0)
         foreach (KeyValuePair<string, string> attr in cfg.Attributes)
           Attributes.Add(attr.Key, attr.Value);
@@ -39,6 +58,16 @@ namespace YASLS.Core
           MessageDataItem sendingMessage = message.Clone();
           foreach (KeyValuePair<string, string> attr in Attributes)
             sendingMessage.AddAttribute(attr.Key, attr.Value);
+
+          foreach (IAttributeExtractorModule extractor in Extractors)
+            try
+            {
+              extractor.ExtractAttributes(sendingMessage);
+            }
+            catch (Exception e)
+            {
+              Logger?.LogEvent(this, Severity.Error, "ExtractorInvoke", $"Failed to execute extractor {extractor.GetType().FullName}.", e);
+            }
 
           Parser.ParseMessage(sendingMessage);
 

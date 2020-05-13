@@ -68,6 +68,12 @@
                 "Parser": {
                   "type": "object",
                   "properties": {
+                    "AttributeExtractors": {
+                      "additionalProperties": {
+                        "description": "Collection of property extractor modules. Modules must support IAttributeExtractor interface. Modules run consequentially in the route thread.",
+                        "$ref": "#/%24defs/ModuleDef"
+                      }
+                    },
                     "ParsingModule": {
                       "description": "Defines and external parser by specifying .NET assembly, managed type, and module configuration. The managed type must support IParserModule interface.",
                       "$ref": "#/%24defs/ModuleDef"

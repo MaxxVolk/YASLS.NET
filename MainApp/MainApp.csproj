@@ -51,13 +51,15 @@
       <Link>ServiceHelper.cs</Link>
     </Compile>
     <Compile Include="Configuration\Expression.cs" />
+    <Compile Include="Implementation\Attribute Extractors\KeyValuePairExtractor.cs" />
+    <Compile Include="Implementation\Attribute Extractors\ReverseDNSLookup.cs" />
     <Compile Include="Implementation\Core\BaseInternalModule.cs" />
     <Compile Include="Implementation\Core\Filter.cs" />
     <Compile Include="Implementation\Core\Parser.cs" />
     <Compile Include="Implementation\Core\QueueFactory.cs" />
     <Compile Include="Implementation\Inputs\FileInput.cs" />
     <Compile Include="Implementation\Outputs\FileOutput.cs" />
-    <Compile Include="Implementation\Extractors.cs" />
+    <Compile Include="Implementation\Attribute Extractors\FacilityCodeExtractor.cs" />
     <Compile Include="Implementation\Inputs\SyslogInput.cs" />
     <Compile Include="Configuration\RootConfiguration.cs" />
     <Compile Include="Configuration\Route.cs" />

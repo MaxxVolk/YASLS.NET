@@ -2,6 +2,7 @@
 using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Net;
 using System.Net.Sockets;
 using System.Reflection;
@@ -96,7 +97,7 @@ namespace YASLS
     private async Task SingleHostReceiver(Task<Socket> connectTask, object state)
     {
       Socket innerSocket = connectTask.Result;
-      bool isCancelled = false;
+      // bool isCancelled = false;
 
       int bytesRead = 0;
       StringBuilder stringBuilder = new StringBuilder();
@@ -109,16 +110,18 @@ namespace YASLS
         }
         catch (OperationCanceledException)
         {
-          isCancelled = true;
+          // isCancelled = true;
           break;
         }
         if (bytesRead > 0)
         {
           string nextPortion = Encoding.ASCII.GetString(buffer, 0, bytesRead);
           int tailPos = nextPortion.IndexOfAny(TrailerChars);
-          if (tailPos >= 0)
+          int headPos = 0;
+          int len = nextPortion.Length;
+          while (tailPos >= 0)
           {
-            string thisMsg = nextPortion.Substring(0, tailPos).Trim(TrailerChars);
+            string thisMsg = nextPortion.Substring(headPos, tailPos - headPos).Trim(TrailerChars);
             stringBuilder.Append(thisMsg);
 
             MessageDataItem message = CreateMessageDataItem(stringBuilder.ToString(), innerSocket.RemoteEndPoint);
@@ -126,15 +129,17 @@ namespace YASLS
               queue.Enqueue(message);
             stringBuilder.Clear();
 
-            if (tailPos < nextPortion.Length - 1)
+            headPos = tailPos + 1;
+            while (headPos < len && TrailerChars.Any(c => c == nextPortion[headPos]))
+              headPos++;
+            if (headPos == len)
             {
-              string nextMsg = nextPortion.Substring(tailPos, nextPortion.Length - tailPos).Trim(TrailerChars);
-              if (!string.IsNullOrEmpty(nextMsg))
-                stringBuilder.Append(nextMsg);
+              break;
             }
+            tailPos = nextPortion.IndexOfAny(TrailerChars, headPos);
           }
-          else
-            stringBuilder.Append(nextPortion);
+          if (headPos < len)
+            stringBuilder.Append(nextPortion.Substring(headPos));
         }
 
       } while (bytesRead > 0);

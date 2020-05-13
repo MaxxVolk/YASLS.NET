@@ -27,6 +27,9 @@ namespace YASLS.Configuration
   [JsonProperty("StopIfMatched")]
     public bool StopIfMatched { get; set; } = false;
 
+    [JsonProperty]
+    public Dictionary<string, ModuleDefinition> AttributeExtractors { get; set; }
+
     [JsonProperty("Parser")]
     public ParserDefinition Parser { get; set; }
 
