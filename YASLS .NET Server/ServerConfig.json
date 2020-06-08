@@ -1,0 +1,149 @@
+{
+  "Inputs": {
+    "TCP Syslog Listener": {
+      "Assembly": "Standard Library",
+      "Type": "YASLS.Standard.Input.SyslogInput",
+      "ConfigurationFilePath": null,
+      "ConfigurationJSON": {
+        "Port": 514,
+        "Protocol": "TCP",
+        "ReciveTimestampAttributeFormat": "UTC" // also "UTC"
+      },
+      "Attributes": {
+        "NetworkSource": "TCP Syslog"
+      }
+    },
+    "UDP Syslog Listener": {
+      "Assembly": "Standard Library",
+      "Type": "YASLS.Standard.Input.SyslogInput",
+      "ConfigurationFilePath": null,
+      "ConfigurationJSON": {
+        "Port": 514,
+        "Protocol": "UDP",
+        "AddSenderIPAttribute": true,
+        "AddReciveTimestampAttribute": true,
+        "ReciveTimestampAttributeFormat": "UTC" // also "UTC"
+      },
+      "Attributes": {
+        "NetworkSource": "UDP Syslog"
+      }
+    },
+    "Test File Input": {
+      "Assembly": "Standard Library",
+      "Type": "YASLS.Standard.Input.FileInput",
+      "ConfigurationJSON": {
+
+      }
+    }
+  },
+  "Assemblies": {
+    "Standard Library": {
+      "AssemblyQualifiedName": "YASLS.Standard.Modules, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null",
+      "AssemblyFilePath": "C:\\Projects\\YASLS .NET Server\\YASLS.Standard.Modules\\bin\\Debug\\YASLS.Standard.Modules.dll"
+    }
+  },
+  "Outputs": {
+    "Console Debug Output": {
+      "Assembly": "Standard Library",
+      "Type": "YASLS.Standard.Output.ConsoleOutput",
+      "ConfigurationJSON": {
+        "Multiline": true
+      }
+    },
+    "JSON File Output": {
+      "Assembly": "Standard Library",
+      "Type": "YASLS.Standard.Output.FileOutput",
+      "ConfigurationJSON": {
+        "Mode": "DataItemAsJSON",
+        "Path": "C:\\Temp\\etc",
+        "RotationSettings": {
+          "FileNameTemplate": "test.log",
+          "Rotation": false
+        }
+      }
+    },
+    "CSV File Output (GUM Storage)": {
+      "Assembly": "Standard Library",
+      "Type": "YASLS.Standard.Output.FileOutput",
+      "ConfigurationJSON": {
+        "Mode": "CSV",
+        "Path": "C:\\Temp\\etc",
+        "RotationSettings": {
+          "FileNameTemplate": "GUMStorage.log",
+          "Rotation": false
+        }
+      }
+    },
+    "CSV File Output (SVP Storage)": {
+      "Assembly": "Standard Library",
+      "Type": "YASLS.Standard.Output.FileOutput",
+      "ConfigurationJSON": {
+        "Mode": "CSV",
+        "Path": "C:\\Temp\\etc",
+        "RotationSettings": {
+          "FileNameTemplate": "SVPStorage.log",
+          "Rotation": false
+        }
+      }
+    },
+    "Splunk HEC": {
+      "Assembly": "Standard Library",
+      "Type": "YASLS.Standard.Output.SplunkHECOutput",
+      "ConfigurationJSON": {
+        "URL": "http://localhost:9923/services/collector/event",
+        "Token": "FF8B5E57-B959-4DED-8FC0-082F26D8B738",
+        "UseFields": false,
+        "EventMetadataDefaults": {
+          "Index": "daascom_int",
+          "UseCurrentTime": false
+        },
+        "FieldMappings": {
+          "HostAttribute": "Host",
+          "TimeAttribute": "EventTimestamp",
+          "SourceAttribute": "source",
+          "SourcetypeAttribute": "sourcetype"
+        }
+      }
+    }
+  },
+  "Routing": {
+    "DefaultRoute": {
+      "Inputs": [ "UDP Syslog Listener", "TCP Syslog Listener", "Test File Input" ],
+      "Filters": {
+        "GUM Storage": {
+          "StopIfMatched": true,
+          "Expression": {
+            "RegExExpression": {
+              "FirstValue": { "Message": true },
+              "Operator": "Matches",
+              "RegularExpressions": { "And": [ " GUM Storage: " ] }
+            }
+          },
+          "Parser": {
+            "AttributeExtractors": {},
+            "Output": [ "CSV File Output (GUM Storage)" ]
+          }
+        }
+      }
+    },
+    "SVP Route": {
+      "Inputs": [ "UDP Syslog Listener", "TCP Syslog Listener", "Test File Input" ],
+      "Filters": {
+        "SVP Storage": {
+          "StopIfMatched": true,
+          "Expression": {
+            "RegExExpression": {
+              "FirstValue": { "Message": true },
+              "Operator": "Matches",
+              "RegularExpressions": { "And": [ " SVP Storage: " ] }
+            }
+          },
+          "Parser": {
+            "AttributeExtractors": {},
+            "Output": [ "CSV File Output (SVP Storage)" ]
+          }
+        }
+      }
+    }
+  }
+}

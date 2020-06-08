@@ -1,6 +1,7 @@
 ﻿using Newtonsoft.Json.Linq;
 
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Threading;
 
@@ -37,6 +38,13 @@ namespace YASLS.SDK.Library
     /// </summary>
     /// <returns></returns>
     Version GetModuleVersion();
+    /// <summary>
+    /// Implementation if this method should initialize and verify module's configuration. This method shall not create any resources or 
+    /// initiate objects implementing <c>IDisposable</c> interface.
+    /// </summary>
+    /// <param name="configuration">Content of 'ConfigurationJSON' object in JSON module definition.</param>
+    /// <param name="cancellationToken">Cancellation token used by server to signal module thread to finish work.</param>
+    void LoadConfiguration(JObject configuration);
   }
 
   /// <summary>
@@ -48,7 +56,7 @@ namespace YASLS.SDK.Library
     /// Implementation of this module should return an entry point for module working thread. 
     /// </summary>
     /// <returns>Module thread entry point</returns>
-    ThreadStart GetWorker();
+    ThreadStart GetWorker(CancellationToken cancellationToken);
     /// <summary>
     /// Implementation if this method should allocate all used resources. This method can be executed multiple time if the module needs restart.
     /// </summary>
@@ -64,15 +72,7 @@ namespace YASLS.SDK.Library
   /// </summary>
   public interface IInputModule : IThreadModule
   {
-    /// <summary>
-    /// Implementation if this method should initialize and verify module's configuration. This method shall not create any resources or 
-    /// initiate objects implementing <c>IDisposable</c> interface.
-    /// </summary>
-    /// <param name="configuration">Content of 'ConfigurationJSON' object in JSON module definition.</param>
-    /// <param name="cancellationToken">Cancellation token used by server to signal module thread to finish work.</param>
-    /// <param name="attributes">Attributes associated with the module. Normally, module implementation shall add them to outgoing message.</param>
-    /// <param name="queue">List of queues, where module shall send messages to.</param>
-    void LoadConfiguration(JObject configuration, CancellationToken cancellationToken, Dictionary<string, string> attributes, IEnumerable<IServerMasterQueue> queue);
+    void SetMessageSender(MessageSender whereToSendMessages);
   }
 
   /// <summary>
@@ -80,18 +80,7 @@ namespace YASLS.SDK.Library
   /// </summary>
   public interface IOutputModule : IThreadModule
   {
-    /// <summary>
-    /// Implementation if this method should initialize and verify module's configuration. This method shall not create any resources or 
-    /// initiate objects implementing <c>IDisposable</c> interface.
-    /// </summary>
-    /// <param name="configuration">Content of 'ConfigurationJSON' object in JSON module definition.</param>
-    /// <param name="cancellationToken">Cancellation token used by server to signal module thread to finish work.</param>
-    void LoadConfiguration(JObject configuration, CancellationToken cancellationToken);
-    /// <summary>
-    /// This method accepts inbound messages/events.
-    /// </summary>
-    /// <param name="message">Inbound message/event.</param>
-    void Enqueue(MessageDataItem message);
+    void SetMessageReceiver(MessageReceiver whereGetMessages);
   }
 
   /// <summary>
@@ -99,13 +88,6 @@ namespace YASLS.SDK.Library
   /// </summary>
   public interface IParserModule : IModule
   {
-    /// <summary>
-    /// Implementation if this method should initialize and verify module's configuration. This method shall not create any resources or 
-    /// initiate objects implementing <c>IDisposable</c> interface.
-    /// </summary>
-    /// <param name="configuration">Content of 'ConfigurationJSON' object in JSON module definition.</param>
-    /// <param name="cancellationToken">Cancellation token used by server to signal module thread to finish work.</param>
-    void LoadConfiguration(JObject configuration, CancellationToken cancellationToken);
     /// <summary>
     /// 
     /// </summary>
@@ -120,13 +102,6 @@ namespace YASLS.SDK.Library
   public interface IFilterModule : IModule
   {
     /// <summary>
-    /// Implementation if this method should initialize and verify module's configuration. This method shall not create any resources or 
-    /// initiate objects implementing <c>IDisposable</c> interface.
-    /// </summary>
-    /// <param name="configuration">Content of 'ConfigurationJSON' object in JSON module definition.</param>
-    /// <param name="cancellationToken">Cancellation token used by server to signal module thread to finish work.</param>
-    void LoadConfiguration(JObject configuration, CancellationToken cancellationToken);
-    /// <summary>
     /// Returns true if an inbound message matches current route branch conditions.
     /// </summary>
     /// <param name="message">Inbound message/event.</param>
@@ -140,13 +115,6 @@ namespace YASLS.SDK.Library
   /// </summary>
   public interface IAttributeExtractorModule : IModule
   {
-    /// <summary>
-    /// Implementation if this method should initialize and verify module's configuration. This method shall not create any resources or 
-    /// initiate objects implementing <c>IDisposable</c> interface.
-    /// </summary>
-    /// <param name="configuration">Content of 'ConfigurationJSON' object in JSON module definition.</param>
-    /// <param name="attributes"></param>
-    void LoadConfiguration(JObject configuration, Dictionary<string, string> attributes);
     /// <summary>
     /// Analyses an inbound message and extract standard information into message attributes.
     /// </summary>
@@ -181,29 +149,22 @@ namespace YASLS.SDK.Library
     /// <param name="logger">Server-provided logger, if implemented. Otherwise null. Module can ignore this parameter if has no use.</param>
     /// <param name="healthReporter">Server-provided health reported, if implemented. Otherwise null. Module can ignore this parameter if has no use.</param>
     /// <param name="queueFactory">Server-provided queue factory, if implemented. Otherwise null. Module can ignore this parameter if has no use.</param>
-    void RegisterServices(ILogger logger, IHealthReporter healthReporter, IQueueFactory queueFactory, IPersistentDataStore persistentStore);
+    void RegisterServices(ILogger logger, IHealthReporter healthReporter, /*IQueueFactory queueFactory,*/ IPersistentDataStore persistentStore);
   }
   #endregion
 
   #region Server Interfaces
-  /// <summary>
-  /// Server-core implemented interface providing Input modules with message/event sink point.
-  /// </summary>
-  public interface IServerMasterQueue
-  {
-    /// <summary>
-    /// Sends a message/event into server's queue.
-    /// </summary>
-    /// <param name="message">Inbound message.</param>
-    void Enqueue(MessageDataItem message);
-  }
+
+  public delegate bool MessageSender(MessageDataItem message, bool canPause);
+  public delegate bool MessageReceiver(out MessageDataItem message);
+
   #endregion
 
   #region Support Interfaces
   /// <summary>
   /// Logging event severity. Refer to <seealso cref="ILogger"/>
   /// </summary>
-  public enum Severity { Debug, Informational, Warning, Error }
+  public enum Severity { Debug = 0, Verbose = 1, Informational = 2, Warning = 3, Error = 4, Fatal = 5 }
 
   /// <summary>
   /// Server-provided interface for modules need to log their own events.
@@ -252,26 +213,27 @@ namespace YASLS.SDK.Library
   /// <summary>
   /// Server-provided interface to use within any module, which needs an internal queue.
   /// </summary>
-  public interface IQueueFactory
-  {
-    /// <summary>
-    /// Creates a new queue for the source module.
-    /// </summary>
-    /// <param name="sourceModule"></param>
-    /// <returns>An object reference implementing <seealso cref="IMessageQueue"/> interface.</returns>
-    IMessageQueue GetMessageQueue(IModule sourceModule);
-  }
+  //public interface IQueueFactory
+  //{
+  //  /// <summary>
+  //  /// Creates a new queue for the source module.
+  //  /// </summary>
+  //  /// <param name="sourceModule"></param>
+  //  /// <returns>An object reference implementing <seealso cref="IMessageQueue"/> interface.</returns>
+  //  //IMessageQueue GetMessageQueue(IModule sourceModule);
+  //  IProducerConsumerCollection<MessageDataItem> GetMessageQueue(IModule sourceModule);
+  //}
 
   /// <summary>
   /// Message/event queue interface if provided by the server.
   /// </summary>
-  public interface IMessageQueue
-  {
-    void Enqueue(MessageDataItem message);
-    bool TryDequeue(out MessageDataItem message);
-    bool TryPeek(out MessageDataItem result);
-    bool IsEmpty { get; }
-  }
+  //public interface IMessageQueue
+  //{
+  //  bool TryEnqueue(MessageDataItem message);
+  //  bool TryDequeue(out MessageDataItem message);
+  //  bool TryPeek(out MessageDataItem result);
+  //  bool IsEmpty { get; }
+  //}
 
   /// <summary>
   /// Server provided interface for any module, which needs a persistent store for working data.

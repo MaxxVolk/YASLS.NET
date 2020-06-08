@@ -7,7 +7,7 @@
     <ProjectGuid>{C17F759C-CF8D-4EED-AE3C-C46E1C3C9BA0}</ProjectGuid>
     <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>YASLS.Standard.Modules</RootNamespace>
+    <RootNamespace>YASLS.Standard</RootNamespace>
     <AssemblyName>YASLS.Standard.Modules</AssemblyName>
     <TargetFrameworkVersion>v4.8</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
@@ -44,7 +44,15 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Attribute Extractor\FacilityCodeExtractor.cs" />
+    <Compile Include="Attribute Extractor\KeyValuePairExtractor.cs" />
+    <Compile Include="Attribute Extractor\ReverseDNSLookup.cs" />
+    <Compile Include="Input\FileInput.cs" />
+    <Compile Include="Input\SyslogInput.cs" />
     <Compile Include="Output\ConsoleOutput.cs" />
+    <Compile Include="Output\FileOutput.cs" />
+    <Compile Include="Output\SplunkHECOutput.cs" />
+    <Compile Include="Parser\RegExParser.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
@@ -55,6 +63,9 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="Schema\" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>

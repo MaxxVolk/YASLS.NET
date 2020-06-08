@@ -9,32 +9,29 @@ using System.Threading;
 using System.Threading.Tasks;
 using YASLS.SDK.Library;
 
-namespace YASLS.Standard.Modules
+namespace YASLS.Standard.Output
 {
-  public class ConsoleOutput : IOutputModule, IServerBind
+  public class ConsoleOutput : ModuleBase, IOutputModule
   {
     protected readonly Guid moduleId = Guid.Parse("{A72FFDB6-F3AF-433F-9FE2-D1D23DA00281}");
     protected CancellationToken token;
     protected ILogger logger = null;
     protected IHealthReporter healthReporter = null;
-    protected IMessageQueue Messages;
-    protected int maxMessageCount = 100;
-
+    protected MessageReceiver MessageReceiver;
 
     #region IOutputModule Implementation
-    public void LoadConfiguration(JObject configuration, CancellationToken cancellationToken)
+    public override void LoadConfiguration(JObject configuration)
     {
-      token = cancellationToken;
     }
 
-    public void Enqueue(MessageDataItem message)
-    {
-      Messages.Enqueue(message);
-    }
     #endregion
 
     #region IThreadModule Implementation
-    public ThreadStart GetWorker() => new ThreadStart(WorkerProc);
+    public ThreadStart GetWorker(CancellationToken cancellationToken)
+    {
+      token = cancellationToken;
+      return new ThreadStart(WorkerProc);
+    }
 
     public void Initialize() { }
 
@@ -49,16 +46,16 @@ namespace YASLS.Standard.Modules
           break;
         try
         {
-          if (Messages.TryDequeue(out MessageDataItem newMessage))
+          if (MessageReceiver.Invoke(out MessageDataItem newMessage))
           {
             Console.WriteLine(newMessage.Message);
             foreach (string attrName in newMessage.GetAttributeNames)
               Console.WriteLine($"{attrName:30}: {newMessage.GetAttributeAsVariant(attrName)}");
-            continue; // sleep only if the queue is empty
+            continue;
           }
           else
           {
-            Thread.Sleep(5);
+            Thread.Sleep(DefaultIdleDelay);
           }
         }
         catch (Exception e)
@@ -69,25 +66,15 @@ namespace YASLS.Standard.Modules
       }
     }
 
-    #region IServerBind Implementation
-    public void RegisterServices(ILogger logger, IHealthReporter healthReporter, IQueueFactory factory, IPersistentDataStore persistentStore)
-    {
-      this.logger = logger;
-      this.healthReporter = healthReporter;
-      Messages = factory.GetMessageQueue(this);
-    }
-    #endregion
-
     #region IModule Implementation
-    public string GetModuleName() => GetType().FullName;
+    public override string GetModuleDisplayName() => "Console Output Module";
 
-    public string GetModuleDisplayName() => "Console Output Module";
+    public override Guid GetModuleId() => moduleId;
 
-    public string GetModuleVendor() => "Core YASLS";
-
-    public Guid GetModuleId() => moduleId;
-
-    public Version GetModuleVersion() => Assembly.GetAssembly(GetType()).GetName().Version;
+    public void SetMessageReceiver(MessageReceiver whereGetMessages)
+    {
+      MessageReceiver = whereGetMessages;
+    }
     #endregion
   }
 }
